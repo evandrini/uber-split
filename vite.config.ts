@@ -4,12 +4,11 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  base: "/uber-split/",
   server: {
     host: "::",
     port: 8080,
-    hmr: {
-      overlay: false,
-    },
+    hmr: { overlay: false },
   },
   plugins: [react()],
   resolve: {

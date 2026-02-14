@@ -1,4 +1,5 @@
 # UberSplit
+https://evandrini.github.io/uber-split/
 
 UberSplit é uma aplicação web que resolve um problema comum:  
 a divisão injusta de corridas de Uber quando há múltiplas paradas.

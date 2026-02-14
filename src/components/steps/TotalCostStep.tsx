@@ -1,28 +1,29 @@
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { DollarSign, ArrowRight, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
-import { Participant } from '@/types/ride';
-import { useLanguage } from '@/i18n/LanguageContext';
+} from '@/components/ui/select'
+import { DollarSign, ArrowRight, ArrowLeft, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
+import { Participant } from '@/types/ride'
+import { useLanguage } from '@/i18n/LanguageContext'
 
 interface TotalCostStepProps {
-  outboundCost: string;
-  returnCost: string;
-  outboundPaidBy: string;
-  returnPaidBy: string;
-  onOutboundCostChange: (value: string) => void;
-  onReturnCostChange: (value: string) => void;
-  onOutboundPaidByChange: (value: string) => void;
-  onReturnPaidByChange: (value: string) => void;
-  participants: Participant[];
-  onNext: () => void;
+  outboundCost: string
+  returnCost: string
+  outboundPaidBy: string
+  returnPaidBy: string
+  onOutboundCostChange: (value: string) => void
+  onReturnCostChange: (value: string) => void
+  onOutboundPaidByChange: (value: string) => void
+  onReturnPaidByChange: (value: string) => void
+  participants: Participant[]
+  onNext: () => void
+  onBack: () => void   // ✅ NOVO
 }
 
 export function TotalCostStep({
@@ -36,20 +37,24 @@ export function TotalCostStep({
   onReturnPaidByChange,
   participants,
   onNext,
+  onBack,   // ✅ NOVO
 }: TotalCostStepProps) {
-  const { t, language } = useLanguage();
+
+  const { t } = useLanguage()
 
   const handleCostChange = (value: string, setter: (v: string) => void) => {
-    const cleaned = value.replace(/[^\d.,]/g, '').replace(',', '.');
-    setter(cleaned);
-  };
+    const cleaned = value.replace(/[^\d.,]/g, '').replace(',', '.')
+    setter(cleaned)
+  }
 
-  const hasOutbound = parseFloat(outboundCost) > 0;
-  const hasReturn = parseFloat(returnCost) > 0;
-  const isValid = hasOutbound || hasReturn;
+  const hasOutbound = parseFloat(outboundCost) > 0
+  const hasReturn = parseFloat(returnCost) > 0
+  const isValid = hasOutbound || hasReturn
 
   return (
     <div className="animate-fade-in">
+
+      {/* HEADER */}
       <div className="text-center mb-6 sm:mb-8">
         <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-xl sm:rounded-2xl gradient-primary flex items-center justify-center">
           <DollarSign className="w-7 h-7 sm:w-8 sm:h-8 text-primary-foreground" />
@@ -63,16 +68,21 @@ export function TotalCostStep({
       </div>
 
       <div className="space-y-4 sm:space-y-6">
-        {/* Outbound cost */}
+
+        {/* IDA */}
         <div className="bg-card rounded-lg sm:rounded-xl p-3 sm:p-4 card-shadow space-y-3">
           <div className="flex items-center gap-2 text-primary">
             <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />
             <Label className="text-sm sm:text-base font-semibold">
-              {t('outboundCost') as string} <span className="text-muted-foreground font-normal">{t('optional') as string}</span>
+              {t('outboundCost') as string}{' '}
+              <span className="text-muted-foreground font-normal">
+                {t('optional') as string}
+              </span>
             </Label>
           </div>
+
           <div className="relative">
-            <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm sm:text-base">
+            <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
               R$
             </span>
             <Input
@@ -84,13 +94,14 @@ export function TotalCostStep({
               className="pl-10 sm:pl-12 text-lg sm:text-2xl h-11 sm:h-14 font-semibold"
             />
           </div>
+
           {hasOutbound && participants.length > 0 && (
             <Select value={outboundPaidBy} onValueChange={onOutboundPaidByChange}>
-              <SelectTrigger className="h-10 sm:h-12 text-sm sm:text-base">
+              <SelectTrigger className="h-10 sm:h-12">
                 <SelectValue placeholder={t('selectPayer') as string} />
               </SelectTrigger>
               <SelectContent>
-                {participants.map((p) => (
+                {participants.map(p => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
                   </SelectItem>
@@ -100,16 +111,20 @@ export function TotalCostStep({
           )}
         </div>
 
-        {/* Return cost */}
+        {/* VOLTA */}
         <div className="bg-card rounded-lg sm:rounded-xl p-3 sm:p-4 card-shadow space-y-3">
           <div className="flex items-center gap-2 text-accent">
             <ArrowDownLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             <Label className="text-sm sm:text-base font-semibold">
-              {t('returnCost') as string} <span className="text-muted-foreground font-normal">{t('optional') as string}</span>
+              {t('returnCost') as string}{' '}
+              <span className="text-muted-foreground font-normal">
+                {t('optional') as string}
+              </span>
             </Label>
           </div>
+
           <div className="relative">
-            <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium text-sm sm:text-base">
+            <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
               R$
             </span>
             <Input
@@ -121,13 +136,14 @@ export function TotalCostStep({
               className="pl-10 sm:pl-12 text-lg sm:text-2xl h-11 sm:h-14 font-semibold"
             />
           </div>
+
           {hasReturn && participants.length > 0 && (
             <Select value={returnPaidBy} onValueChange={onReturnPaidByChange}>
-              <SelectTrigger className="h-10 sm:h-12 text-sm sm:text-base">
+              <SelectTrigger className="h-10 sm:h-12">
                 <SelectValue placeholder={t('selectPayer') as string} />
               </SelectTrigger>
               <SelectContent>
-                {participants.map((p) => (
+                {participants.map(p => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.name}
                   </SelectItem>
@@ -143,15 +159,30 @@ export function TotalCostStep({
           </p>
         )}
 
-        <Button
-          onClick={onNext}
-          disabled={!isValid}
-          className="w-full h-11 sm:h-12 text-base sm:text-lg font-semibold gradient-primary hover:opacity-90 transition-opacity"
-        >
-          {t('continue') as string}
-          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
-        </Button>
+        {/* BOTÕES */}
+        <div className="flex gap-3 pt-2">
+
+          <Button
+            variant="outline"
+            onClick={onBack}
+            className="flex-1 h-11 sm:h-12"
+          >
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            {t('back') as string}
+          </Button>
+
+          <Button
+            onClick={onNext}
+            disabled={!isValid}
+            className="flex-1 h-11 sm:h-12 text-base sm:text-lg font-semibold gradient-primary"
+          >
+            {t('continue') as string}
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
+          </Button>
+
+        </div>
+
       </div>
     </div>
-  );
+  )
 }

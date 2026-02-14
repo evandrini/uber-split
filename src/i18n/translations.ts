@@ -5,14 +5,14 @@ export const translations = {
     // Header
     appName: 'UberSplit',
     tagline: 'Divida corridas de forma justa ✨',
-    
+
     // Introduction
     introTitle: 'Divisão justa de corridas',
     introText: 'Este site ajuda a dividir corridas de Uber de forma justa quando existem múltiplas paradas. Cada pessoa paga apenas o trecho em que esteve no carro, evitando que quem mora mais perto pague pela viagem inteira dos outros.',
-    
+
     // Steps
     steps: ['Pessoas', 'Valor', 'Paradas', 'Resultado'],
-    
+
     // Participants step
     participantsTitle: 'Participantes',
     participantsSubtitle: 'Quem estava na corrida?',
@@ -20,7 +20,7 @@ export const translations = {
     addParticipant: 'Adicionar',
     minParticipants: 'Adicione pelo menos 2 participantes',
     continue: 'Continuar',
-    
+
     // Cost step
     costTitle: 'Valor da Corrida',
     costSubtitle: 'Informe os valores da ida e/ou volta',
@@ -31,12 +31,13 @@ export const translations = {
     returnPaidBy: 'Quem pagou a volta?',
     selectPayer: 'Selecione quem pagou',
     atLeastOneRequired: 'Informe pelo menos um valor',
-    
+
     // Stops step
     stopsTitle: 'Paradas',
     stopsSubtitle: 'Adicione origem, paradas e destino',
     outboundTrip: 'Corrida de Ida',
     returnTrip: 'Corrida de Volta',
+    useReverseRoute: 'Usar caminho inverso da ida',
     origin: 'Origem',
     finalDestination: 'Destino final',
     intermediateStop: 'Parada intermediária',
@@ -46,7 +47,7 @@ export const translations = {
     minStops: 'Adicione pelo menos origem e destino',
     back: 'Voltar',
     calculate: 'Calcular',
-    
+
     // Result step
     resultTitle: 'Resultado',
     resultSubtitle: 'Veja quanto cada um deve pagar',
@@ -58,12 +59,12 @@ export const translations = {
     perPerson: 'Divisão por pessoa',
     legs: 'trecho',
     legsPlural: 'trechos',
-    
+
     // Settlement
     finalSettlement: 'Acerto Final',
     mustPay: 'deve pagar',
     to: 'para',
-    
+
     // Actions
     shareWhatsApp: 'Compartilhar no WhatsApp',
     copied: 'Copiado!',
@@ -71,7 +72,7 @@ export const translations = {
     newRide: 'Nova Corrida',
     copySuccess: 'Copiado para a área de transferência!',
     copyError: 'Erro ao copiar',
-    
+
     // WhatsApp message
     whatsappTitle: '🚗 *Divisão da Corrida de Uber*',
     whatsappOutbound: '📍 *Ida*',
@@ -86,14 +87,14 @@ export const translations = {
     // Header
     appName: 'UberSplit',
     tagline: 'Split rides fairly ✨',
-    
+
     // Introduction
     introTitle: 'Fair ride splitting',
     introText: 'This site helps split Uber rides fairly when there are multiple stops. Each person pays only for the part of the trip they were actually in the car, so people who live closer are not overcharged.',
-    
+
     // Steps
     steps: ['People', 'Cost', 'Stops', 'Result'],
-    
+
     // Participants step
     participantsTitle: 'Participants',
     participantsSubtitle: 'Who was on the ride?',
@@ -101,7 +102,7 @@ export const translations = {
     addParticipant: 'Add',
     minParticipants: 'Add at least 2 participants',
     continue: 'Continue',
-    
+
     // Cost step
     costTitle: 'Ride Cost',
     costSubtitle: 'Enter outbound and/or return costs',
@@ -112,12 +113,13 @@ export const translations = {
     returnPaidBy: 'Who paid for return?',
     selectPayer: 'Select who paid',
     atLeastOneRequired: 'Enter at least one cost',
-    
+
     // Stops step
     stopsTitle: 'Stops',
     stopsSubtitle: 'Add origin, stops and destination',
     outboundTrip: 'Outbound Trip',
     returnTrip: 'Return Trip',
+    useReverseRoute: 'Use reverse route',
     origin: 'Origin',
     finalDestination: 'Final destination',
     intermediateStop: 'Intermediate stop',
@@ -127,7 +129,7 @@ export const translations = {
     minStops: 'Add at least origin and destination',
     back: 'Back',
     calculate: 'Calculate',
-    
+
     // Result step
     resultTitle: 'Result',
     resultSubtitle: 'See how much each person owes',
@@ -139,12 +141,12 @@ export const translations = {
     perPerson: 'Per person breakdown',
     legs: 'leg',
     legsPlural: 'legs',
-    
+
     // Settlement
     finalSettlement: 'Final Settlement',
     mustPay: 'must pay',
     to: 'to',
-    
+
     // Actions
     shareWhatsApp: 'Share on WhatsApp',
     copied: 'Copied!',
@@ -152,7 +154,7 @@ export const translations = {
     newRide: 'New Ride',
     copySuccess: 'Copied to clipboard!',
     copyError: 'Error copying',
-    
+
     // WhatsApp message
     whatsappTitle: '🚗 *Uber Ride Split*',
     whatsappOutbound: '📍 *Outbound*',

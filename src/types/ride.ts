@@ -4,12 +4,15 @@ export interface Participant {
 }
 
 export interface Stop {
-  id: string;
-  name: string;
-  address: string;
-  entering: string[]; // participant IDs entering at this stop
-  exiting: string[]; // participant IDs exiting at this stop
+  id: string
+  name: string
+  address: string
+  lat?: number
+  lon?: number
+  entering: string[]
+  exiting: string[]
 }
+
 
 export interface Leg {
   fromStop: Stop;

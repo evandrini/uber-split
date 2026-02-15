@@ -35,6 +35,7 @@ export const translations = {
     // Stops step
     stopsTitle: 'Paradas',
     stopsSubtitle: 'Adicione origem, paradas e destino',
+    stopConfiguration: "Configuração da parada",
     outboundTrip: 'Corrida de Ida',
     returnTrip: 'Corrida de Volta',
     useReverseRoute: 'Usar caminho inverso da ida',
@@ -117,6 +118,7 @@ export const translations = {
     // Stops step
     stopsTitle: 'Stops',
     stopsSubtitle: 'Add origin, stops and destination',
+    stopConfiguration: "Stop configuration",
     outboundTrip: 'Outbound Trip',
     returnTrip: 'Return Trip',
     useReverseRoute: 'Use reverse route',

@@ -1,32 +1,70 @@
 # UberSplit
+
+🌐 Live app  
 https://evandrini.github.io/uber-split/
 
-UberSplit é uma aplicação web que resolve um problema comum:  
-a divisão injusta de corridas de Uber quando há múltiplas paradas.
+UberSplit is a web app that solves a very common real-world problem:  
+how to split Uber rides fairly when there are multiple stops.
 
-Na maioria das vezes, as pessoas dividem o valor “por dois” ou “por três”,
-sem considerar que quem desce primeiro não deveria pagar o restante da viagem.
-Isso faz com que quem mora mais perto acabe pagando mais do que o justo.
+Most people simply split the total cost evenly, without considering that
+someone who leaves earlier should not pay for the rest of the trip.
+This often makes the person who lives closer pay more than they should.
 
-## A solução
+UberSplit fixes that.
 
-O UberSplit calcula o valor correto de forma proporcional,
-garantindo que cada pessoa pague apenas pelos trechos
-em que realmente esteve dentro do carro.
+---
 
-Regras aplicadas:
-- Cada pessoa começa a pagar a partir do ponto onde entra na corrida.
-- Cada pessoa para de pagar no ponto onde sai.
-- Trechos compartilhados são divididos igualmente.
-- Trechos individuais são pagos apenas por quem permaneceu no carro.
-- O resultado final mostra claramente quem deve pagar quem.
+## 🚗 When should you use UberSplit?
 
-## Tecnologias
+UberSplit is typically used **after the ride is finished**.
+
+Once you know the total fare and the route taken,
+you enter the stops and who entered or left the car at each point.
+
+The app calculates a fair split automatically.
+
+No mental math. No awkward discussions.
+
+---
+
+## ⚖️ What UberSplit calculates
+
+Each person pays only for the portion of the trip they actually used.
+
+Calculation rules:
+
+- A person starts paying when they enter the ride
+- A person stops paying when they leave
+- Shared segments are divided equally
+- Individual segments are paid only by who remained
+- The result clearly shows who owes whom
+
+---
+
+## 💡 Why this matters
+
+Splitting “evenly” is simple, but almost always unfair.
+
+People who leave earlier often:
+
+- pay for distance they did not travel
+- subsidize the rest of the group
+- or force everyone into confusing manual calculations
+
+UberSplit removes all of this and produces a fair result instantly.
+
+---
+
+## 🛠 Tech Stack
+
 - React
 - TypeScript
 - Vite
 - Tailwind CSS
 
-## Objetivo do projeto
-Este projeto foi criado para resolver um problema real do dia a dia,
-com foco em lógica de negócio clara, UX simples e cálculo justo.
+---
+
+## 🎯 Project goal
+
+This project was created to solve a real everyday problem,
+with focus on clear business logic, simple UX and transparent cost calculation.

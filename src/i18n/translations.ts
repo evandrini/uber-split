@@ -48,6 +48,10 @@ export const translations = {
     minStops: 'Adicione pelo menos origem e destino',
     back: 'Voltar',
     calculate: 'Calcular',
+    returnRouteRequired: "Preencha o trajeto da volta antes de calcular.",
+    outboundRouteRequired: "Preencha o trajeto de ida antes de calcular.",
+    returnRouteSuggestion: "Você informou volta. Deseja copiar o caminho da ida automaticamente?"
+
 
     // Result step
     resultTitle: 'Resultado',
@@ -131,6 +135,10 @@ export const translations = {
     minStops: 'Add at least origin and destination',
     back: 'Back',
     calculate: 'Calculate',
+    returnRouteRequired: "Fill the return route before calculating.",
+    outboundRouteRequired: "Fill the outbound route before calculating.",
+    returnRouteSuggestion: "Return detected. Copy outbound route automatically?"
+
 
     // Result step
     resultTitle: 'Result',

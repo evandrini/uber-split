@@ -1,9 +1,16 @@
 import { useState, useRef } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@/components/ui/tabs'
 import { MapPin, Plus, Trash2, ArrowRight, ArrowLeft } from 'lucide-react'
 import { Stop, Participant, TripData } from '@/types/ride'
 import { useLanguage } from '@/i18n/LanguageContext'
+
 
 interface StopsStepProps {
   hasOutbound: boolean
@@ -226,8 +233,8 @@ function TripStopsEditor({
                           onChange({ ...trip, stops: updated })
                         }}
                         className={`px-3 py-2 rounded-lg border text-sm ${checked
-                            ? 'bg-red-100 border-red-400 text-red-700'
-                            : 'bg-background border-border'
+                          ? 'bg-red-100 border-red-400 text-red-700'
+                          : 'bg-background border-border'
                           }`}
                       >
                         {p.name}
@@ -261,8 +268,8 @@ function TripStopsEditor({
                           onChange({ ...trip, stops: updated })
                         }}
                         className={`px-3 py-2 rounded-lg border text-sm ${checked
-                            ? 'bg-green-100 border-green-400 text-green-700'
-                            : 'bg-background border-border'
+                          ? 'bg-green-100 border-green-400 text-green-700'
+                          : 'bg-background border-border'
                           }`}
                       >
                         {p.name}
@@ -318,13 +325,78 @@ export function StopsStep({
 
   const { t } = useLanguage()
 
-  const isValid =
-    (!hasOutbound || outboundTrip.stops.length >= 2) &&
-    (!hasReturn || returnTrip.stops.length >= 2)
+  const [tab, setTab] = useState('outbound')
+  const [error, setError] = useState<string | null>(null)
+  const [shakeReturn, setShakeReturn] = useState(false)
+
+  ////////////////////////////////////////////////////
+  // inverter rota automática
+  ////////////////////////////////////////////////////
+
+  const reverseOutboundToReturn = async () => {
+    if (outboundTrip.stops.length < 2) return
+
+    const reversed = outboundTrip.stops
+      .map(s => ({
+        ...s,
+        id: crypto.randomUUID(),
+        entering: [],
+        exiting: []
+      }))
+      .reverse()
+
+    const newLegs: any[] = []
+    for (let i = 0; i < reversed.length - 1; i++) {
+      const km = await calculateDistance(reversed[i], reversed[i + 1])
+      newLegs.push({ distance: km ? Number(km.toFixed(2)) : 0 })
+    }
+
+    onReturnChange({
+      ...returnTrip,
+      stops: reversed,
+      legs: newLegs
+    })
+  }
+
+  ////////////////////////////////////////////////////
+  // validação PRO
+  ////////////////////////////////////////////////////
+
+  const handleCalculate = () => {
+
+    if (hasOutbound && outboundTrip.stops.length < 2) {
+      setError(t('outboundRouteRequired'))
+      setTab('outbound')
+      return
+    }
+
+    if (hasReturn && returnTrip.stops.length < 2) {
+
+      setError(t('returnRouteRequired'))
+      setTab('return')
+
+      // animação visual
+      setShakeReturn(true)
+      setTimeout(() => setShakeReturn(false), 600)
+
+      return
+    }
+
+    setError(null)
+    onNext()
+  }
+
+  ////////////////////////////////////////////////////
+
+  const returnIsEmpty = returnTrip.stops.length < 2
+  const outboundReady = outboundTrip.stops.length >= 2
+
+  ////////////////////////////////////////////////////
 
   return (
     <div className="space-y-6">
 
+      {/* HEADER */}
       <div className="text-center mb-8">
         <div className="w-16 h-16 mx-auto mb-4 rounded-2xl gradient-primary flex items-center justify-center">
           <MapPin className="w-8 h-8 text-primary-foreground" />
@@ -339,17 +411,92 @@ export function StopsStep({
         </p>
       </div>
 
-      <TripStopsEditor
-        trip={hasOutbound ? outboundTrip : returnTrip}
-        participants={participants}
-        onChange={hasOutbound ? onOutboundChange : onReturnChange}
-      />
+      {/* TABS */}
+      {hasOutbound && hasReturn ? (
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
 
+          <TabsList className="grid grid-cols-2 bg-muted p-1 rounded-xl h-12">
+
+            <TabsTrigger
+              value="outbound"
+              className="rounded-lg font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+            >
+              {t('outboundTrip')}
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="return"
+              className="rounded-lg font-semibold data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-primary transition-all"
+            >
+              {t('returnTrip')}
+            </TabsTrigger>
+
+          </TabsList>
+
+          {/* IDA */}
+          <TabsContent value="outbound">
+            <TripStopsEditor
+              trip={outboundTrip}
+              participants={participants}
+              onChange={onOutboundChange}
+            />
+          </TabsContent>
+
+          {/* VOLTA */}
+          <TabsContent value="return">
+
+            {/* destaque visual se faltar rota */}
+            <div className={`space-y-3 ${shakeReturn ? 'animate-pulse' : ''}`}>
+
+              {returnIsEmpty && outboundReady && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 text-center">
+                  {t('returnRouteSuggestion')}
+                </div>
+              )}
+
+              {outboundReady && (
+                <Button
+                  variant="secondary"
+                  className="w-full"
+                  onClick={reverseOutboundToReturn}
+                >
+                  {t('useReverseRoute')}
+                </Button>
+              )}
+
+              <TripStopsEditor
+                trip={returnTrip}
+                participants={participants}
+                onChange={onReturnChange}
+              />
+
+            </div>
+
+          </TabsContent>
+
+        </Tabs>
+      ) : (
+        <TripStopsEditor
+          trip={hasOutbound ? outboundTrip : returnTrip}
+          participants={participants}
+          onChange={hasOutbound ? onOutboundChange : onReturnChange}
+        />
+      )}
+
+      {/* ERRO GLOBAL */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-3 rounded-lg text-center font-medium">
+          {error}
+        </div>
+      )}
+
+      {/* BOTÕES */}
       <div className="flex gap-3 pt-4">
         <Button variant="outline" onClick={onBack} className="flex-1">
           <ArrowLeft /> {t('back')}
         </Button>
-        <Button onClick={onNext} disabled={!isValid} className="flex-1">
+
+        <Button onClick={handleCalculate} className="flex-1">
           {t('calculate')} <ArrowRight />
         </Button>
       </div>

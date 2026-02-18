@@ -2,6 +2,10 @@
 <html lang="pt-BR">
 
 <head>
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <meta name="google-site-verification" content="CZpvSI82qNx8RS9mXcME2OEqhWOFhE3J5rod8l5iE8A" />
 
   <title>UberSplit — Fair Uber ride cost calculator</title>
@@ -14,6 +18,7 @@
 
   <meta name="author" content="Evandro Lobato">
   <meta name="robots" content="index, follow">
+
   <link rel="canonical" href="https://evandrini.github.io/uber-split/">
 
   <!-- Open Graph -->
@@ -24,30 +29,19 @@
   <meta property="og:type" content="website">
   <meta property="og:image" content="https://evandrini.github.io/uber-split/preview.png">
 
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="UberSplit – Divisão justa de corridas" />
-  <meta name="twitter:description"
-    content="Ferramenta para dividir corridas de Uber de forma justa quando há múltiplas paradas." />
-  <meta name="twitter:image" content="/og-image.png" />
-
-  <!-- SEO hidden content style -->
-  <style>
-    .seo-hidden {
-      position: absolute;
-      left: -9999px;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-    }
-  </style>
-
 </head>
 
 <body>
 
-  <!-- SEO content invisible -->
-  <section class="seo-hidden">
+  <!-- SEO hidden content -->
+  <div style="
+    position:absolute;
+    left:-9999px;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+  ">
+
     UberSplit é uma calculadora para dividir corridas Uber com múltiplas paradas.
     Cada pessoa paga apenas pelo trecho em que esteve no carro.
     Ideal para dividir corridas com amigos ou viagens compartilhadas.
@@ -55,10 +49,11 @@
     UberSplit is a smart calculator that splits Uber ride costs fairly
     when there are multiple stops or passengers leaving at different locations.
     Each person pays only for the portion of the trip they actually traveled.
-  </section>
 
-  <!-- React App -->
+  </div>
+
   <div id="root"></div>
+
   <script type="module" src="/src/main.tsx"></script>
 
 </body>

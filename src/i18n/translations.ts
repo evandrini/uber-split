@@ -50,7 +50,7 @@ export const translations = {
     calculate: 'Calcular',
     returnRouteRequired: "Preencha o trajeto da volta antes de calcular.",
     outboundRouteRequired: "Preencha o trajeto de ida antes de calcular.",
-    returnRouteSuggestion: "Você informou volta. Deseja copiar o caminho da ida automaticamente?"
+    returnRouteSuggestion: "Você informou volta. Deseja copiar o caminho da ida automaticamente?",
 
 
     // Result step
@@ -137,7 +137,7 @@ export const translations = {
     calculate: 'Calculate',
     returnRouteRequired: "Fill the return route before calculating.",
     outboundRouteRequired: "Fill the outbound route before calculating.",
-    returnRouteSuggestion: "Return detected. Copy outbound route automatically?"
+    returnRouteSuggestion: "Return detected. Copy outbound route automatically?",
 
 
     // Result step

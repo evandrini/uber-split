@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Users, Plus, Trash2, ArrowRight } from 'lucide-react';
 import type { Participant } from '@/types/ride';
 import { useLanguage } from '@/i18n/LanguageContext';
+import { hapticPulse } from '@/lib/haptics';
 
 interface ParticipantsStepProps {
   participants: Participant[];
@@ -38,11 +39,13 @@ export function ParticipantsStep({
       ...participants,
       { id: crypto.randomUUID(), name },
     ]);
+    hapticPulse(10);
     setNewName('');
   };
 
   const removeParticipant = (id: string) => {
     onParticipantsChange(participants.filter(p => p.id !== id));
+    hapticPulse(8);
   };
 
   const updateParticipantName = (id: string, name: string) => {
@@ -86,7 +89,7 @@ export function ParticipantsStep({
           <Button
             type="button"
             onClick={addParticipant}
-            className="shrink-0 gradient-primary"
+            className="shrink-0 gradient-primary btn-pop"
           >
             <Plus className="w-5 h-5" />
           </Button>
@@ -129,7 +132,7 @@ export function ParticipantsStep({
           <Button
             onClick={onNext}
             disabled={!isValid}
-            className="w-full h-12 gradient-primary"
+            className="w-full h-12 gradient-primary btn-wave"
           >
             {t('continue') as string}
             <ArrowRight className="w-5 h-5 ml-2" />

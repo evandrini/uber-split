@@ -5,6 +5,11 @@ export const translations = {
     appName: 'UberSplit',
     tagline: 'Divida corridas de forma justa',
     smartAssistantLabel: 'Assistente inteligente de divisão',
+    gameTitle: 'Jornada da corrida',
+    gameSubtitle: 'Avance etapa por etapa e finalize seu calculo justo.',
+    levelLabel: 'Nivel',
+    scoreLabel: 'Pontos',
+    missionLabel: 'Missao atual',
 
     seoTitle: 'UberSplit | Calculadora para dividir corrida de Uber',
     seoDescription:
@@ -89,6 +94,10 @@ export const translations = {
     shareWhatsApp: 'Compartilhar no WhatsApp',
     copied: 'Copiado!',
     copyMessage: 'Copiar mensagem',
+    showMore: 'Ver mais detalhes da conta',
+    showLess: 'Ver menos',
+    noEligibleEnter: 'Ninguem novo para entrar aqui.',
+    noEligibleExit: 'Ninguem para sair aqui.',
     edit: 'Editar',
     newRide: 'Nova Corrida',
     copySuccess: 'Copiado para a área de transferência!',
@@ -107,6 +116,11 @@ export const translations = {
     appName: 'UberSplit',
     tagline: 'Split rides fairly',
     smartAssistantLabel: 'Smart split assistant',
+    gameTitle: 'Ride journey',
+    gameSubtitle: 'Progress step by step and finish a fair split.',
+    levelLabel: 'Level',
+    scoreLabel: 'Score',
+    missionLabel: 'Current mission',
 
     seoTitle: 'UberSplit | Fair Uber Ride Split Calculator',
     seoDescription:
@@ -191,6 +205,10 @@ export const translations = {
     shareWhatsApp: 'Share on WhatsApp',
     copied: 'Copied!',
     copyMessage: 'Copy message',
+    showMore: 'Show full calculation details',
+    showLess: 'Show less',
+    noEligibleEnter: 'No one new can enter here.',
+    noEligibleExit: 'No one can exit here.',
     edit: 'Edit',
     newRide: 'New Ride',
     copySuccess: 'Copied to clipboard!',
@@ -209,6 +227,11 @@ export const translations = {
     appName: 'UberSplit',
     tagline: 'Divide viajes de forma justa',
     smartAssistantLabel: 'Asistente inteligente de división',
+    gameTitle: 'Ruta del viaje',
+    gameSubtitle: 'Avanza paso a paso y termina un reparto justo.',
+    levelLabel: 'Nivel',
+    scoreLabel: 'Puntos',
+    missionLabel: 'Mision actual',
 
     seoTitle: 'UberSplit | Calculadora para dividir viajes de Uber',
     seoDescription:
@@ -293,6 +316,10 @@ export const translations = {
     shareWhatsApp: 'Compartir en WhatsApp',
     copied: '¡Copiado!',
     copyMessage: 'Copiar mensaje',
+    showMore: 'Ver mas detalles de la cuenta',
+    showLess: 'Ver menos',
+    noEligibleEnter: 'Nadie nuevo puede subir aqui.',
+    noEligibleExit: 'Nadie puede bajar aqui.',
     edit: 'Editar',
     newRide: 'Nuevo Viaje',
     copySuccess: '¡Copiado al portapapeles!',
@@ -310,6 +337,9 @@ export const translations = {
 } as const
 
 export type TranslationKey = keyof typeof translations['pt-BR']
+
+
+
 
 
 

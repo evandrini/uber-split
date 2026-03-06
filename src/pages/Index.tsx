@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { StepIndicator } from '@/components/StepIndicator'
 import { TotalCostStep } from '@/components/steps/TotalCostStep'
 import { ParticipantsStep } from '@/components/steps/ParticipantsStep'
@@ -19,6 +20,14 @@ import {
 } from '@/utils/rideCalculator'
 import { Car, Sparkles } from 'lucide-react'
 import { useLanguage } from '@/i18n/LanguageContext'
+import { hapticPulse } from '@/lib/haptics'
+
+const getStepAnimation = (step: number) => {
+  if (step === 1) return { initial: { opacity: 0, y: 14 }, exit: { opacity: 0, y: -8 } }
+  if (step === 2) return { initial: { opacity: 0, x: 18 }, exit: { opacity: 0, x: -14 } }
+  if (step === 3) return { initial: { opacity: 0, scale: 0.985 }, exit: { opacity: 0, scale: 0.985 } }
+  return { initial: { opacity: 0, y: 10, scale: 0.99 }, exit: { opacity: 0, y: -8, scale: 0.99 } }
+}
 
 const Index = () => {
   const { t } = useLanguage()
@@ -51,6 +60,13 @@ const Index = () => {
   const hasOutbound = parseFloat(outboundCost) > 0
   const hasReturn = parseFloat(returnCost) > 0
 
+  const progress = Math.round((currentStep / 4) * 100)
+
+  const goToStep = (step: number, pattern: number | number[] = 10) => {
+    hapticPulse(pattern)
+    setCurrentStep(step)
+  }
+
   const buildReverseStops = (sourceStops: Stop[]) => {
     const allParticipantIds = participants.map(participant => participant.id)
     const reversed = [...sourceStops].reverse()
@@ -65,6 +81,8 @@ const Index = () => {
 
   const applyReverseRouteToReturn = () => {
     if (outboundTrip.stops.length < 2) return
+
+    hapticPulse([8, 20, 8])
 
     const reversedStops = buildReverseStops(outboundTrip.stops)
     const reversedLegs = calculateLegs(reversedStops, participants).map(leg => ({
@@ -186,10 +204,11 @@ const Index = () => {
     )
 
     setFullCalculation(combined)
-    setCurrentStep(4)
+    goToStep(4, [10, 30, 14])
   }
 
   const handleReset = () => {
+    hapticPulse([12, 20, 12])
     setCurrentStep(1)
     setOutboundCost('')
     setReturnCost('')
@@ -202,19 +221,24 @@ const Index = () => {
   }
 
   const steps = t('steps') as readonly string[]
+  const stepAnimation = getStepAnimation(currentStep)
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background gradient-subtle">
-      <div className="pointer-events-none absolute -left-24 top-28 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
-      <div className="pointer-events-none absolute -right-20 top-64 h-56 w-56 rounded-full bg-accent/10 blur-3xl" />
+      <div className="orb-float pointer-events-none absolute -left-24 top-28 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
+      <div className="orb-float-delay pointer-events-none absolute -right-20 top-64 h-56 w-56 rounded-full bg-accent/10 blur-3xl" />
 
       <header className="sticky top-0 z-10 border-b border-border/70 bg-background/80 backdrop-blur-lg">
         <div className="container py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary shadow-lg shadow-primary/20">
+              <motion.div
+                animate={{ y: [0, -2, 0] }}
+                transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary shadow-lg shadow-primary/20"
+              >
                 <Car className="h-5 w-5 text-primary-foreground" />
-              </div>
+              </motion.div>
               <div>
                 <h1 className="text-xl font-bold tracking-tight">{t('appName') as string}</h1>
                 <p className="text-[11px] text-muted-foreground">{t('smartAssistantLabel') as string}</p>
@@ -227,7 +251,7 @@ const Index = () => {
 
       <main className="container py-6 pb-20">
         <div className="mx-auto max-w-md">
-          <div className="mb-6 rounded-2xl border border-primary/20 bg-card/90 p-4 shadow-[0_12px_30px_hsl(var(--primary)/0.09)] backdrop-blur-xl">
+          <div className="mb-4 rounded-2xl border border-primary/20 bg-card/90 p-4 shadow-[0_12px_30px_hsl(var(--primary)/0.09)] backdrop-blur-xl">
             <div className="flex gap-3">
               <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Sparkles className="h-4 w-4" />
@@ -243,6 +267,14 @@ const Index = () => {
             </div>
           </div>
 
+          <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-muted/70">
+            <motion.div
+              className="h-full rounded-full bg-gradient-to-r from-primary to-accent"
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            />
+          </div>
+
           <StepIndicator
             currentStep={currentStep}
             totalSteps={4}
@@ -250,61 +282,77 @@ const Index = () => {
           />
 
           <div className="rounded-3xl border border-border/70 bg-card/90 p-6 shadow-[0_18px_44px_hsl(var(--primary)/0.10)] backdrop-blur-xl">
-            {currentStep === 1 && (
-              <ParticipantsStep
-                participants={participants}
-                onParticipantsChange={setParticipants}
-                onNext={() => setCurrentStep(2)}
-                onBack={() => { }}
-              />
-            )}
-
-            {currentStep === 2 && (
-              <TotalCostStep
-                outboundCost={outboundCost}
-                returnCost={returnCost}
-                outboundPaidBy={outboundPaidBy}
-                returnPaidBy={returnPaidBy}
-                participants={participants}
-                onOutboundCostChange={setOutboundCost}
-                onReturnCostChange={setReturnCost}
-                onOutboundPaidByChange={setOutboundPaidBy}
-                onReturnPaidByChange={setReturnPaidBy}
-                onNext={() => {
-                  initializeTrips()
-                  setCurrentStep(3)
-                }}
-                onBack={() => setCurrentStep(1)}
-              />
-            )}
-
-            {currentStep === 3 && (
-              <StopsStep
-                hasOutbound={hasOutbound}
-                hasReturn={hasReturn}
-                outboundTrip={outboundTrip}
-                returnTrip={returnTrip}
-                participants={participants}
-                onOutboundChange={setOutboundTrip}
-                onReturnChange={setReturnTrip}
-                onApplyReverseReturn={applyReverseRouteToReturn}
-                onNext={handleCalculate}
-                onBack={() => setCurrentStep(2)}
-              />
-            )}
-
-            {currentStep === 4 && fullCalculation && (
-              <ResultStep
-                fullCalculation={fullCalculation}
-                participants={participants}
-                settlements={calculateSettlements(
-                  fullCalculation,
-                  participants
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={stepAnimation.initial}
+                animate={{ opacity: 1, x: 0, y: 0, scale: 1 }}
+                exit={stepAnimation.exit}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
+              >
+                {currentStep === 1 && (
+                  <ParticipantsStep
+                    participants={participants}
+                    onParticipantsChange={setParticipants}
+                    onNext={() => goToStep(2, 12)}
+                    onBack={() => { }}
+                  />
                 )}
-                onBack={() => setCurrentStep(3)}
-                onReset={handleReset}
-              />
-            )}
+
+                {currentStep === 2 && (
+                  <TotalCostStep
+                    outboundCost={outboundCost}
+                    returnCost={returnCost}
+                    outboundPaidBy={outboundPaidBy}
+                    returnPaidBy={returnPaidBy}
+                    participants={participants}
+                    onOutboundCostChange={setOutboundCost}
+                    onReturnCostChange={setReturnCost}
+                    onOutboundPaidByChange={value => {
+                      setOutboundPaidBy(value)
+                      hapticPulse(6)
+                    }}
+                    onReturnPaidByChange={value => {
+                      setReturnPaidBy(value)
+                      hapticPulse(6)
+                    }}
+                    onNext={() => {
+                      initializeTrips()
+                      goToStep(3, 12)
+                    }}
+                    onBack={() => goToStep(1, 8)}
+                  />
+                )}
+
+                {currentStep === 3 && (
+                  <StopsStep
+                    hasOutbound={hasOutbound}
+                    hasReturn={hasReturn}
+                    outboundTrip={outboundTrip}
+                    returnTrip={returnTrip}
+                    participants={participants}
+                    onOutboundChange={setOutboundTrip}
+                    onReturnChange={setReturnTrip}
+                    onApplyReverseReturn={applyReverseRouteToReturn}
+                    onNext={handleCalculate}
+                    onBack={() => goToStep(2, 8)}
+                  />
+                )}
+
+                {currentStep === 4 && fullCalculation && (
+                  <ResultStep
+                    fullCalculation={fullCalculation}
+                    participants={participants}
+                    settlements={calculateSettlements(
+                      fullCalculation,
+                      participants
+                    )}
+                    onBack={() => goToStep(3, 8)}
+                    onReset={handleReset}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <p className="mt-6 text-center text-xs text-muted-foreground">
@@ -317,3 +365,4 @@ const Index = () => {
 }
 
 export default Index
+

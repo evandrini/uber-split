@@ -12,6 +12,7 @@ import { DollarSign, ArrowRight, ArrowLeft, ArrowUpRight, ArrowDownLeft } from '
 import type { Participant } from '@/types/ride'
 import { useLanguage } from '@/i18n/LanguageContext'
 import { getLocaleConfig } from '@/i18n/localeConfig'
+import { hapticPulse } from '@/lib/haptics'
 
 interface TotalCostStepProps {
   outboundCost: string
@@ -94,6 +95,9 @@ export function TotalCostStep({
               placeholder={locale.decimalExample}
               value={outboundCost}
               onChange={e => handleCostChange(e.target.value, onOutboundCostChange)}
+              onBlur={() => {
+                if (parseFloat(outboundCost) > 0) hapticPulse(6)
+              }}
               className="h-11 pl-10 text-lg font-semibold sm:h-14 sm:pl-12 sm:text-2xl"
             />
           </div>
@@ -135,6 +139,9 @@ export function TotalCostStep({
               placeholder={locale.decimalExample}
               value={returnCost}
               onChange={e => handleCostChange(e.target.value, onReturnCostChange)}
+              onBlur={() => {
+                if (parseFloat(returnCost) > 0) hapticPulse(6)
+              }}
               className="h-11 pl-10 text-lg font-semibold sm:h-14 sm:pl-12 sm:text-2xl"
             />
           </div>
@@ -171,7 +178,7 @@ export function TotalCostStep({
           <Button
             variant="outline"
             onClick={onBack}
-            className="h-11 flex-1 sm:h-12"
+            className="h-11 flex-1 sm:h-12 btn-pop"
           >
             <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
             {t('back') as string}
@@ -180,7 +187,7 @@ export function TotalCostStep({
           <Button
             onClick={onNext}
             disabled={!isValid}
-            className="h-11 flex-1 gradient-primary text-base font-semibold sm:h-12 sm:text-lg"
+            className="h-11 flex-1 gradient-primary text-base font-semibold sm:h-12 sm:text-lg btn-slide"
           >
             {t('continue') as string}
             <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />

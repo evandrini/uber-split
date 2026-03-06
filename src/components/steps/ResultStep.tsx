@@ -47,6 +47,7 @@ export function ResultStep({
   onReset,
 }: ResultStepProps) {
   const [copied, setCopied] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
   const { t, language } = useLanguage()
 
   const buildShareMessage = () => {
@@ -160,8 +161,6 @@ export function ResultStep({
     })
     .sort((a, b) => b.distance - a.distance)
 
-  const settlementTitle = t('settlementExplainTitle') as string
-
   return (
     <div className="animate-fade-in space-y-5 sm:space-y-6">
       <div className="text-center">
@@ -238,85 +237,9 @@ export function ResultStep({
         )}
       </div>
 
-      <div className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
-        <h3 className="mb-1 text-sm font-bold text-foreground sm:text-base">
-          {t('rideIntensityTitle') as string}
-        </h3>
-        <p className="mb-3 text-xs text-muted-foreground sm:text-sm">
-          {t('rideIntensitySubtitle') as string}
-        </p>
-
-        <div className="space-y-2.5">
-          {rideIntensity.map(row => (
-            <div key={row.participantId} className="space-y-1">
-              <div className="flex items-center justify-between text-xs sm:text-sm">
-                <span className="font-medium text-foreground">{row.participantName}</span>
-                <span className="text-muted-foreground">{row.distance.toFixed(1)} km</span>
-              </div>
-              <div className="h-2.5 w-full rounded-full bg-muted">
-                <div
-                  className="h-2.5 rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
-                  style={{ width: `${Math.max(row.percent, row.distance > 0 ? 8 : 0)}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2 sm:space-y-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-sm">
-          {t('perPerson') as string}
-        </h3>
-
-        {sortedCosts.map((cost, index) => {
-          const topLegs = cost.legDetails.slice(0, 3)
-
-          return (
-            <article
-              key={cost.participantId}
-              className="animate-slide-in rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4"
-              style={{ animationDelay: `${index * 90}ms` }}
-            >
-              <div className="mb-2 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-foreground sm:text-base">
-                    {cost.participantName}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground sm:text-xs">
-                    {cost.legDetails.length}{' '}
-                    {cost.legDetails.length === 1
-                      ? (t('legs') as string)
-                      : (t('legsPlural') as string)}
-                  </p>
-                </div>
-                <p className="text-base font-bold text-accent sm:text-xl">
-                  {formatCurrency(cost.totalCost, language)}
-                </p>
-              </div>
-
-              {topLegs.length > 0 && (
-                <div className="space-y-1.5 rounded-lg bg-muted/50 p-2.5 sm:p-3">
-                  {topLegs.map((leg, legIndex) => (
-                    <div key={`${cost.participantId}-${legIndex}`} className="flex items-center justify-between gap-2 text-xs">
-                      <span className="truncate text-muted-foreground">
-                        {leg.from} {'->'} {leg.to}
-                      </span>
-                      <span className="font-medium text-foreground">
-                        {formatCurrency(leg.cost, language)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </article>
-          )
-        })}
-      </div>
-
       <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10 p-4 sm:p-5">
         <h3 className="mb-3 text-sm font-bold text-foreground sm:text-base">
-          {settlementTitle}
+          {t('settlementExplainTitle') as string}
         </h3>
 
         {!hasAnyPayer ? (
@@ -345,54 +268,142 @@ export function ResultStep({
         )}
       </div>
 
-      <div className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
-        <h3 className="mb-3 text-sm font-bold text-foreground sm:text-base">
-          {t('settlementSummaryTitle') as string}
-        </h3>
+      <Button
+        variant="outline"
+        onClick={() => setShowDetails(prev => !prev)}
+        className="w-full h-10 sm:h-11 btn-pop"
+      >
+        {showDetails ? (t('showLess') as string) : (t('showMore') as string)}
+      </Button>
 
-        <div className="space-y-2">
-          {settlementSummary.map(row => (
-            <div
-              key={row.participantId}
-              className="rounded-xl border border-border/70 bg-background/80 p-3"
-            >
-              <div className="mb-2 text-sm font-semibold text-foreground">
-                {row.participantName}
-              </div>
+      {showDetails && (
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
+            <h3 className="mb-1 text-sm font-bold text-foreground sm:text-base">
+              {t('rideIntensityTitle') as string}
+            </h3>
+            <p className="mb-3 text-xs text-muted-foreground sm:text-sm">
+              {t('rideIntensitySubtitle') as string}
+            </p>
 
-              <div className="grid grid-cols-3 gap-2 text-[11px] sm:text-xs">
-                <div>
-                  <div className="text-muted-foreground">{t('shouldPayLabel') as string}</div>
-                  <div className="font-medium text-foreground">
-                    {formatCurrency(row.shouldPay, language)}
+            <div className="space-y-2.5">
+              {rideIntensity.map(row => (
+                <div key={row.participantId} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="font-medium text-foreground">{row.participantName}</span>
+                    <span className="text-muted-foreground">{row.distance.toFixed(1)} km</span>
+                  </div>
+                  <div className="h-2.5 w-full rounded-full bg-muted">
+                    <div
+                      className="h-2.5 rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+                      style={{ width: `${Math.max(row.percent, row.distance > 0 ? 8 : 0)}%` }}
+                    />
                   </div>
                 </div>
-                <div>
-                  <div className="text-muted-foreground">{t('paidLabel') as string}</div>
-                  <div className="font-medium text-foreground">
-                    {formatCurrency(row.paid, language)}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-muted-foreground">{t('balanceLabel') as string}</div>
-                  <div className="font-medium text-foreground">
-                    {Math.abs(row.balance) < 0.01
-                      ? `${t('balanceZero') as string} (${formatCurrency(0, language)})`
-                      : row.balance > 0
-                        ? `${t('balancePositive') as string} ${formatCurrency(row.balance, language)}`
-                        : `${t('balanceNegative') as string} ${formatCurrency(Math.abs(row.balance), language)}`}
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <div className="space-y-2 sm:space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-sm">
+              {t('perPerson') as string}
+            </h3>
+
+            {sortedCosts.map((cost, index) => {
+              const topLegs = cost.legDetails.slice(0, 3)
+
+              return (
+                <article
+                  key={cost.participantId}
+                  className="animate-slide-in rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4"
+                  style={{ animationDelay: `${index * 90}ms` }}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground sm:text-base">
+                        {cost.participantName}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground sm:text-xs">
+                        {cost.legDetails.length}{' '}
+                        {cost.legDetails.length === 1
+                          ? (t('legs') as string)
+                          : (t('legsPlural') as string)}
+                      </p>
+                    </div>
+                    <p className="text-base font-bold text-accent sm:text-xl">
+                      {formatCurrency(cost.totalCost, language)}
+                    </p>
+                  </div>
+
+                  {topLegs.length > 0 && (
+                    <div className="space-y-1.5 rounded-lg bg-muted/50 p-2.5 sm:p-3">
+                      {topLegs.map((leg, legIndex) => (
+                        <div key={`${cost.participantId}-${legIndex}`} className="flex items-center justify-between gap-2 text-xs">
+                          <span className="truncate text-muted-foreground">
+                            {leg.from} {'->'} {leg.to}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {formatCurrency(leg.cost, language)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </article>
+              )
+            })}
+          </div>
+
+          <div className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
+            <h3 className="mb-3 text-sm font-bold text-foreground sm:text-base">
+              {t('settlementSummaryTitle') as string}
+            </h3>
+
+            <div className="space-y-2">
+              {settlementSummary.map(row => (
+                <div
+                  key={row.participantId}
+                  className="rounded-xl border border-border/70 bg-background/80 p-3"
+                >
+                  <div className="mb-2 text-sm font-semibold text-foreground">
+                    {row.participantName}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-[11px] sm:text-xs">
+                    <div>
+                      <div className="text-muted-foreground">{t('shouldPayLabel') as string}</div>
+                      <div className="font-medium text-foreground">
+                        {formatCurrency(row.shouldPay, language)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">{t('paidLabel') as string}</div>
+                      <div className="font-medium text-foreground">
+                        {formatCurrency(row.paid, language)}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">{t('balanceLabel') as string}</div>
+                      <div className="font-medium text-foreground">
+                        {Math.abs(row.balance) < 0.01
+                          ? `${t('balanceZero') as string} (${formatCurrency(0, language)})`
+                          : row.balance > 0
+                            ? `${t('balancePositive') as string} ${formatCurrency(row.balance, language)}`
+                            : `${t('balanceNegative') as string} ${formatCurrency(Math.abs(row.balance), language)}`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-2 sm:space-y-3">
         <Button
           onClick={handleShare}
-          className="h-11 w-full gradient-primary text-sm sm:h-12 sm:text-base"
+          className="h-11 w-full gradient-primary text-sm sm:h-12 sm:text-base btn-slide"
         >
           <Share2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
           {t('shareWhatsApp') as string}
@@ -401,7 +412,7 @@ export function ResultStep({
         <Button
           variant="outline"
           onClick={handleCopy}
-          className="h-11 w-full text-sm sm:h-12 sm:text-base"
+          className="h-11 w-full text-sm sm:h-12 sm:text-base btn-pop"
         >
           {copied ? (
             <>
@@ -420,7 +431,7 @@ export function ResultStep({
           <Button
             variant="outline"
             onClick={onBack}
-            className="h-10 flex-1 text-sm sm:h-12 sm:text-base"
+            className="h-10 flex-1 text-sm sm:h-12 sm:text-base btn-pop"
           >
             <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
             {t('edit') as string}
@@ -429,7 +440,7 @@ export function ResultStep({
           <Button
             variant="outline"
             onClick={onReset}
-            className="h-10 flex-1 text-sm sm:h-12 sm:text-base"
+            className="h-10 flex-1 text-sm sm:h-12 sm:text-base btn-pop"
           >
             <Wallet className="mr-2 h-4 w-4" />
             {t('newRide') as string}
@@ -439,3 +450,4 @@ export function ResultStep({
     </div>
   )
 }
+

@@ -1,5 +1,7 @@
-import { Participant, Stop, Leg, ParticipantCost, RideCalculation, Settlement, FullRideCalculation } from '@/types/ride';
-import { Language, translations } from '@/i18n/translations';
+﻿import type { Participant, Stop, Leg, ParticipantCost, RideCalculation, Settlement, FullRideCalculation } from '@/types/ride'
+import type { Language } from '@/i18n/translations'
+import { translations } from '@/i18n/translations'
+import { getLocaleConfig } from '@/i18n/localeConfig'
 
 export function calculateLegs(stops: Stop[], participants: Participant[]): Leg[] {
   const legs: Leg[] = [];
@@ -223,16 +225,12 @@ export function calculateSettlements(
 }
 
 export function formatCurrency(value: number, language: Language = 'pt-BR'): string {
-  if (language === 'en-US') {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value).replace('$', 'R$');
-  }
-  return new Intl.NumberFormat('pt-BR', {
+  const locale = getLocaleConfig(language)
+
+  return new Intl.NumberFormat(locale.locale, {
     style: 'currency',
-    currency: 'BRL',
-  }).format(value);
+    currency: locale.currency,
+  }).format(value)
 }
 
 export function generateWhatsAppText(
@@ -281,3 +279,6 @@ export function generateWhatsAppText(
 
   return text;
 }
+
+
+

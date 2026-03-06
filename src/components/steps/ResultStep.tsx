@@ -1,11 +1,35 @@
-import { Button } from '@/components/ui/button'
-import { ArrowLeft, Check, MapPin, Share2, Wallet, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
-import { Participant, Settlement, FullRideCalculation } from '@/types/ride'
+﻿import { Button } from '@/components/ui/button'
+import {
+  ArrowDownLeft,
+  ArrowLeft,
+  ArrowUpRight,
+  Check,
+  CircleDollarSign,
+  Copy,
+  MapPin,
+  Share2,
+  Wallet,
+} from 'lucide-react'
+import type { Participant, Settlement, FullRideCalculation } from '@/types/ride'
 import { formatCurrency, generateWhatsAppText } from '@/utils/rideCalculator'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { cn } from '@/lib/utils'
 import { useLanguage } from '@/i18n/LanguageContext'
+
+type SettlementSummaryRow = {
+  participantId: string
+  participantName: string
+  shouldPay: number
+  paid: number
+  balance: number
+}
+
+type RideIntensityRow = {
+  participantId: string
+  participantName: string
+  distance: number
+  percent: number
+}
 
 interface ResultStepProps {
   fullCalculation: FullRideCalculation
@@ -15,23 +39,26 @@ interface ResultStepProps {
   onReset: () => void
 }
 
-export function ResultStep({ fullCalculation, participants, settlements, onBack, onReset }: ResultStepProps) {
+export function ResultStep({
+  fullCalculation,
+  participants,
+  settlements,
+  onBack,
+  onReset,
+}: ResultStepProps) {
   const [copied, setCopied] = useState(false)
   const { t, language } = useLanguage()
 
-  //////////////////////////////////////////////////////
-  // COPY MESSAGE
-  //////////////////////////////////////////////////////
-
   const buildShareMessage = () => {
     const baseText = generateWhatsAppText(fullCalculation, settlements, language)
-
     const siteUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
     const promoText =
       language === 'pt-BR'
-        ? '\n\n🚀 Faça sua própria divisão aqui:\n'
-        : '\n\n🚀 Split your ride here:\n'
+        ? '\n\nFaça sua própria divisão aqui:\n'
+        : language === 'es-ES'
+          ? '\n\nHaz tu propia división aquí:\n'
+          : '\n\nSplit your ride here:\n'
 
     return baseText + promoText + siteUrl
   }
@@ -47,170 +74,265 @@ export function ResultStep({ fullCalculation, participants, settlements, onBack,
     }
   }
 
-  //////////////////////////////////////////////////////
-  // WHATSAPP SHARE (DIRECT LINK)
-  //////////////////////////////////////////////////////
-
   const handleShare = () => {
     const message = buildShareMessage()
     const encoded = encodeURIComponent(message)
-    const url = `https://wa.me/?text=${encoded}`
-
-    window.open(url, '_blank')
+    window.open(`https://wa.me/?text=${encoded}`, '_blank')
   }
 
-  //////////////////////////////////////////////////////
-
   const sortedCosts = [...fullCalculation.combinedCosts]
-    .filter(p => p.totalCost > 0)
+    .filter(cost => cost.totalCost > 0)
     .sort((a, b) => b.totalCost - a.totalCost)
 
   const outboundPayer = fullCalculation.outbound?.paidById
-    ? participants.find(p => p.id === fullCalculation.outbound?.paidById)
+    ? participants.find(participant => participant.id === fullCalculation.outbound?.paidById)
     : null
 
   const returnPayer = fullCalculation.return?.paidById
-    ? participants.find(p => p.id === fullCalculation.return?.paidById)
+    ? participants.find(participant => participant.id === fullCalculation.return?.paidById)
     : null
 
-  //////////////////////////////////////////////////////
+  const hasAnyPayer = Boolean(fullCalculation.outbound?.paidById || fullCalculation.return?.paidById)
+
+  const summaryMap = new Map<string, SettlementSummaryRow>()
+
+  participants.forEach(participant => {
+    summaryMap.set(participant.id, {
+      participantId: participant.id,
+      participantName: participant.name,
+      shouldPay: 0,
+      paid: 0,
+      balance: 0,
+    })
+  })
+
+  fullCalculation.combinedCosts.forEach(cost => {
+    const row = summaryMap.get(cost.participantId)
+    if (!row) return
+    row.shouldPay = cost.totalCost
+  })
+
+  if (fullCalculation.outbound?.paidById) {
+    const row = summaryMap.get(fullCalculation.outbound.paidById)
+    if (row) row.paid += fullCalculation.outbound.totalCost
+  }
+
+  if (fullCalculation.return?.paidById) {
+    const row = summaryMap.get(fullCalculation.return.paidById)
+    if (row) row.paid += fullCalculation.return.totalCost
+  }
+
+  const settlementSummary = Array.from(summaryMap.values())
+    .map(row => ({
+      ...row,
+      balance: row.paid - row.shouldPay,
+    }))
+    .sort((a, b) => b.shouldPay - a.shouldPay)
+
+  const rideDistanceMap = new Map<string, number>()
+  participants.forEach(participant => rideDistanceMap.set(participant.id, 0))
+
+  const allLegs = [
+    ...(fullCalculation.outbound?.legs ?? []),
+    ...(fullCalculation.return?.legs ?? []),
+  ]
+
+  allLegs.forEach(leg => {
+    leg.passengers.forEach(passengerId => {
+      rideDistanceMap.set(
+        passengerId,
+        (rideDistanceMap.get(passengerId) ?? 0) + leg.distance
+      )
+    })
+  })
+
+  const maxDistance = Math.max(...Array.from(rideDistanceMap.values()), 0)
+
+  const rideIntensity: RideIntensityRow[] = participants
+    .map(participant => {
+      const distance = rideDistanceMap.get(participant.id) ?? 0
+      return {
+        participantId: participant.id,
+        participantName: participant.name,
+        distance,
+        percent: maxDistance > 0 ? (distance / maxDistance) * 100 : 0,
+      }
+    })
+    .sort((a, b) => b.distance - a.distance)
+
+  const settlementTitle = t('settlementExplainTitle') as string
 
   return (
-    <div className="animate-fade-in">
-
-      <div className="text-center mb-4 sm:mb-6">
-        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-xl sm:rounded-2xl gradient-primary flex items-center justify-center">
-          <Check className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
+    <div className="animate-fade-in space-y-5 sm:space-y-6">
+      <div className="text-center">
+        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl gradient-primary sm:mb-4 sm:h-16 sm:w-16 sm:rounded-2xl">
+          <Check className="h-6 w-6 text-primary-foreground sm:h-8 sm:w-8" />
         </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">
+        <h2 className="mb-1 text-xl font-bold text-foreground sm:mb-2 sm:text-2xl">
           {t('resultTitle') as string}
         </h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
+        <p className="text-sm text-muted-foreground sm:text-base">
           {t('resultSubtitle') as string}
         </p>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
-        <div className="bg-card rounded-lg sm:rounded-xl p-3 sm:p-4 card-shadow">
-          <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground mb-0.5 sm:mb-1">
-            <span className="text-lg sm:text-2xl">💰</span>
-            <span className="text-[10px] sm:text-xs font-medium">{t('total') as string}</span>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4">
+          <div className="mb-1 flex items-center gap-2 text-muted-foreground">
+            <CircleDollarSign className="h-4 w-4" />
+            <span className="text-xs font-medium">{t('total') as string}</span>
           </div>
-          <p className="text-base sm:text-xl font-bold text-foreground">
+          <p className="text-base font-bold text-foreground sm:text-xl">
             {formatCurrency(fullCalculation.totalCost, language)}
           </p>
         </div>
 
-        <div className="bg-card rounded-lg sm:rounded-xl p-3 sm:p-4 card-shadow">
-          <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground mb-0.5 sm:mb-1">
-            <MapPin className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="text-[10px] sm:text-xs font-medium">{t('distance') as string}</span>
+        <div className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4">
+          <div className="mb-1 flex items-center gap-2 text-muted-foreground">
+            <MapPin className="h-4 w-4" />
+            <span className="text-xs font-medium">{t('distance') as string}</span>
           </div>
-          <p className="text-base sm:text-xl font-bold text-foreground">
+          <p className="text-base font-bold text-foreground sm:text-xl">
             {fullCalculation.totalDistance.toFixed(1)} km
           </p>
         </div>
       </div>
 
-      {/* Trip Details */}
-      <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-
+      <div className="space-y-2">
         {fullCalculation.outbound && fullCalculation.outbound.totalCost > 0 && (
-          <div className="bg-primary/5 border border-primary/10 rounded-lg sm:rounded-xl p-3 sm:p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ArrowUpRight className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium">{t('outbound') as string}</span>
+          <div className="rounded-xl border border-primary/15 bg-primary/5 p-3 sm:p-4">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 font-semibold text-foreground">
+                <ArrowUpRight className="h-4 w-4 text-primary" />
+                {t('outbound') as string}
               </div>
-              <span className="text-sm font-bold">
+              <span className="font-bold text-foreground">
                 {formatCurrency(fullCalculation.outbound.totalCost, language)}
               </span>
             </div>
-            {outboundPayer && (
-              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                <Wallet className="w-3 h-3" />
-                <span>{t('whoPaid') as string}: {outboundPayer.name}</span>
-              </div>
-            )}
+            <div className="mt-1 text-xs text-muted-foreground">
+              {outboundPayer
+                ? `${t('whoPaid') as string}: ${outboundPayer.name}`
+                : `${t('whoPaid') as string}: -`}
+            </div>
           </div>
         )}
 
         {fullCalculation.return && fullCalculation.return.totalCost > 0 && (
-          <div className="bg-accent/5 border border-accent/10 rounded-lg sm:rounded-xl p-3 sm:p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ArrowDownLeft className="w-4 h-4 text-accent" />
-                <span className="text-sm font-medium">{t('return') as string}</span>
+          <div className="rounded-xl border border-accent/20 bg-accent/5 p-3 sm:p-4">
+            <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center gap-2 font-semibold text-foreground">
+                <ArrowDownLeft className="h-4 w-4 text-accent" />
+                {t('return') as string}
               </div>
-              <span className="text-sm font-bold">
+              <span className="font-bold text-foreground">
                 {formatCurrency(fullCalculation.return.totalCost, language)}
               </span>
             </div>
-            {returnPayer && (
-              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                <Wallet className="w-3 h-3" />
-                <span>{t('whoPaid') as string}: {returnPayer.name}</span>
-              </div>
-            )}
+            <div className="mt-1 text-xs text-muted-foreground">
+              {returnPayer
+                ? `${t('whoPaid') as string}: ${returnPayer.name}`
+                : `${t('whoPaid') as string}: -`}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Individual Costs */}
-      <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-        <h3 className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
+        <h3 className="mb-1 text-sm font-bold text-foreground sm:text-base">
+          {t('rideIntensityTitle') as string}
+        </h3>
+        <p className="mb-3 text-xs text-muted-foreground sm:text-sm">
+          {t('rideIntensitySubtitle') as string}
+        </p>
+
+        <div className="space-y-2.5">
+          {rideIntensity.map(row => (
+            <div key={row.participantId} className="space-y-1">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <span className="font-medium text-foreground">{row.participantName}</span>
+                <span className="text-muted-foreground">{row.distance.toFixed(1)} km</span>
+              </div>
+              <div className="h-2.5 w-full rounded-full bg-muted">
+                <div
+                  className="h-2.5 rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+                  style={{ width: `${Math.max(row.percent, row.distance > 0 ? 8 : 0)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2 sm:space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:text-sm">
           {t('perPerson') as string}
         </h3>
 
-        {sortedCosts.map((cost, index) => (
-          <div
-            key={cost.participantId}
-            className="bg-card rounded-lg sm:rounded-xl p-3 sm:p-4 card-shadow animate-slide-in"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
+        {sortedCosts.map((cost, index) => {
+          const topLegs = cost.legDetails.slice(0, 3)
 
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                  <span className="text-sm sm:text-lg">👤</span>
-                </div>
+          return (
+            <article
+              key={cost.participantId}
+              className="animate-slide-in rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4"
+              style={{ animationDelay: `${index * 90}ms` }}
+            >
+              <div className="mb-2 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm sm:text-base font-semibold text-foreground">
+                  <p className="text-sm font-semibold text-foreground sm:text-base">
                     {cost.participantName}
                   </p>
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    {cost.legDetails.length} {cost.legDetails.length !== 1 ? t('legsPlural') as string : t('legs') as string}
+                  <p className="text-[11px] text-muted-foreground sm:text-xs">
+                    {cost.legDetails.length}{' '}
+                    {cost.legDetails.length === 1
+                      ? (t('legs') as string)
+                      : (t('legsPlural') as string)}
                   </p>
                 </div>
+                <p className="text-base font-bold text-accent sm:text-xl">
+                  {formatCurrency(cost.totalCost, language)}
+                </p>
               </div>
 
-              <p className="text-base sm:text-xl font-bold text-accent">
-                {formatCurrency(cost.totalCost, language)}
-              </p>
-            </div>
-
-          </div>
-        ))}
+              {topLegs.length > 0 && (
+                <div className="space-y-1.5 rounded-lg bg-muted/50 p-2.5 sm:p-3">
+                  {topLegs.map((leg, legIndex) => (
+                    <div key={`${cost.participantId}-${legIndex}`} className="flex items-center justify-between gap-2 text-xs">
+                      <span className="truncate text-muted-foreground">
+                        {leg.from} {'->'} {leg.to}
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {formatCurrency(leg.cost, language)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </article>
+          )
+        })}
       </div>
 
-      {/* Settlement */}
-      {settlements.length > 0 && (
-        <div className="bg-gradient-to-br from-accent/10 to-primary/10 border border-accent/20 rounded-lg sm:rounded-xl p-4 sm:p-5 mb-4 sm:mb-6">
-          <h3 className="text-sm sm:text-base font-bold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
-            <span className="text-lg sm:text-xl">💸</span>
-            {t('finalSettlement') as string}
-          </h3>
+      <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10 p-4 sm:p-5">
+        <h3 className="mb-3 text-sm font-bold text-foreground sm:text-base">
+          {settlementTitle}
+        </h3>
 
-          <div className="space-y-2 sm:space-y-3">
+        {!hasAnyPayer ? (
+          <p className="text-sm text-muted-foreground">
+            {t('missingPayerForSettlement') as string}
+          </p>
+        ) : settlements.length > 0 ? (
+          <div className="space-y-2">
             {settlements.map((settlement, index) => (
               <div
-                key={index}
-                className="bg-card/80 backdrop-blur rounded-lg p-3 sm:p-4 flex items-center justify-between animate-slide-in"
-                style={{ animationDelay: `${index * 100}ms` }}
+                key={`${settlement.fromId}-${settlement.toId}-${index}`}
+                className="flex items-center justify-between rounded-lg border border-border/70 bg-card/85 p-3 text-sm"
               >
-                <span className="text-sm">
-                  {settlement.fromName} → {settlement.toName}
+                <span className="text-foreground">
+                  <strong>{settlement.fromName}</strong> {t('mustPay') as string}{' '}
+                  <strong>{settlement.toName}</strong>
                 </span>
                 <span className="font-bold text-accent">
                   {formatCurrency(settlement.amount, language)}
@@ -218,25 +340,78 @@ export function ResultStep({ fullCalculation, participants, settlements, onBack,
               </div>
             ))}
           </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t('noSettlementNeeded') as string}</p>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
+        <h3 className="mb-3 text-sm font-bold text-foreground sm:text-base">
+          {t('settlementSummaryTitle') as string}
+        </h3>
+
+        <div className="space-y-2">
+          {settlementSummary.map(row => (
+            <div
+              key={row.participantId}
+              className="rounded-xl border border-border/70 bg-background/80 p-3"
+            >
+              <div className="mb-2 text-sm font-semibold text-foreground">
+                {row.participantName}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-[11px] sm:text-xs">
+                <div>
+                  <div className="text-muted-foreground">{t('shouldPayLabel') as string}</div>
+                  <div className="font-medium text-foreground">
+                    {formatCurrency(row.shouldPay, language)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">{t('paidLabel') as string}</div>
+                  <div className="font-medium text-foreground">
+                    {formatCurrency(row.paid, language)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">{t('balanceLabel') as string}</div>
+                  <div className="font-medium text-foreground">
+                    {Math.abs(row.balance) < 0.01
+                      ? `${t('balanceZero') as string} (${formatCurrency(0, language)})`
+                      : row.balance > 0
+                        ? `${t('balancePositive') as string} ${formatCurrency(row.balance, language)}`
+                        : `${t('balanceNegative') as string} ${formatCurrency(Math.abs(row.balance), language)}`}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
 
-      {/* ACTIONS */}
       <div className="space-y-2 sm:space-y-3">
-
         <Button
           onClick={handleShare}
-          className="w-full h-10 sm:h-12 text-sm sm:text-base gradient-primary"
+          className="h-11 w-full gradient-primary text-sm sm:h-12 sm:text-base"
+        >
+          <Share2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+          {t('shareWhatsApp') as string}
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={handleCopy}
+          className="h-11 w-full text-sm sm:h-12 sm:text-base"
         >
           {copied ? (
             <>
-              <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+              <Check className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
               {t('copied') as string}
             </>
           ) : (
             <>
-              <Share2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-              {t('shareWhatsApp') as string}
+              <Copy className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              {t('copyMessage') as string}
             </>
           )}
         </Button>
@@ -245,21 +420,21 @@ export function ResultStep({ fullCalculation, participants, settlements, onBack,
           <Button
             variant="outline"
             onClick={onBack}
-            className="flex-1 h-10 sm:h-12 text-sm sm:text-base"
+            className="h-10 flex-1 text-sm sm:h-12 sm:text-base"
           >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
             {t('edit') as string}
           </Button>
 
           <Button
             variant="outline"
             onClick={onReset}
-            className="flex-1 h-10 sm:h-12 text-sm sm:text-base"
+            className="h-10 flex-1 text-sm sm:h-12 sm:text-base"
           >
+            <Wallet className="mr-2 h-4 w-4" />
             {t('newRide') as string}
           </Button>
         </div>
-
       </div>
     </div>
   )

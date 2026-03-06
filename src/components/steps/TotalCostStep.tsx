@@ -1,4 +1,4 @@
-import { Input } from '@/components/ui/input'
+﻿import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import {
@@ -9,8 +9,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { DollarSign, ArrowRight, ArrowLeft, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
-import { Participant } from '@/types/ride'
+import type { Participant } from '@/types/ride'
 import { useLanguage } from '@/i18n/LanguageContext'
+import { getLocaleConfig } from '@/i18n/localeConfig'
 
 interface TotalCostStepProps {
   outboundCost: string
@@ -23,7 +24,7 @@ interface TotalCostStepProps {
   onReturnPaidByChange: (value: string) => void
   participants: Participant[]
   onNext: () => void
-  onBack: () => void   // ✅ NOVO
+  onBack: () => void
 }
 
 export function TotalCostStep({
@@ -37,10 +38,10 @@ export function TotalCostStep({
   onReturnPaidByChange,
   participants,
   onNext,
-  onBack,   // ✅ NOVO
+  onBack,
 }: TotalCostStepProps) {
-
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
+  const locale = getLocaleConfig(language)
 
   const handleCostChange = (value: string, setter: (v: string) => void) => {
     const cleaned = value.replace(/[^\d.,]/g, '').replace(',', '.')
@@ -49,49 +50,51 @@ export function TotalCostStep({
 
   const hasOutbound = parseFloat(outboundCost) > 0
   const hasReturn = parseFloat(returnCost) > 0
-  const isValid = hasOutbound || hasReturn
+  const hasAnyCost = hasOutbound || hasReturn
+
+  const outboundPayerValid = !hasOutbound || outboundPaidBy.length > 0
+  const returnPayerValid = !hasReturn || returnPaidBy.length > 0
+
+  const payerSelectionValid = outboundPayerValid && returnPayerValid
+  const isValid = hasAnyCost && payerSelectionValid
 
   return (
     <div className="animate-fade-in">
-
-      {/* HEADER */}
-      <div className="text-center mb-6 sm:mb-8">
-        <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-xl sm:rounded-2xl gradient-primary flex items-center justify-center">
-          <DollarSign className="w-7 h-7 sm:w-8 sm:h-8 text-primary-foreground" />
+      <div className="mb-6 text-center sm:mb-8">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-xl gradient-primary sm:mb-4 sm:h-16 sm:w-16 sm:rounded-2xl">
+          <DollarSign className="h-7 w-7 text-primary-foreground sm:h-8 sm:w-8" />
         </div>
-        <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">
+        <h2 className="mb-1 text-xl font-bold text-foreground sm:mb-2 sm:text-2xl">
           {t('costTitle') as string}
         </h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
+        <p className="text-sm text-muted-foreground sm:text-base">
           {t('costSubtitle') as string}
         </p>
       </div>
 
       <div className="space-y-4 sm:space-y-6">
-
-        {/* IDA */}
-        <div className="bg-card rounded-lg sm:rounded-xl p-3 sm:p-4 card-shadow space-y-3">
+        <div className="space-y-3 rounded-lg bg-card p-3 card-shadow sm:rounded-xl sm:p-4">
           <div className="flex items-center gap-2 text-primary">
-            <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5" />
-            <Label className="text-sm sm:text-base font-semibold">
+            <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5" />
+            <Label className="text-sm font-semibold sm:text-base">
               {t('outboundCost') as string}{' '}
-              <span className="text-muted-foreground font-normal">
+              <span className="font-normal text-muted-foreground">
                 {t('optional') as string}
               </span>
             </Label>
           </div>
 
           <div className="relative">
-            <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
-              R$
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-muted-foreground sm:left-4">
+              {locale.currencySymbol}
             </span>
             <Input
               type="text"
               inputMode="decimal"
-              placeholder="0,00"
+              placeholder={locale.decimalExample}
               value={outboundCost}
               onChange={e => handleCostChange(e.target.value, onOutboundCostChange)}
-              className="pl-10 sm:pl-12 text-lg sm:text-2xl h-11 sm:h-14 font-semibold"
+              className="h-11 pl-10 text-lg font-semibold sm:h-14 sm:pl-12 sm:text-2xl"
             />
           </div>
 
@@ -111,29 +114,28 @@ export function TotalCostStep({
           )}
         </div>
 
-        {/* VOLTA */}
-        <div className="bg-card rounded-lg sm:rounded-xl p-3 sm:p-4 card-shadow space-y-3">
+        <div className="space-y-3 rounded-lg bg-card p-3 card-shadow sm:rounded-xl sm:p-4">
           <div className="flex items-center gap-2 text-accent">
-            <ArrowDownLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            <Label className="text-sm sm:text-base font-semibold">
+            <ArrowDownLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+            <Label className="text-sm font-semibold sm:text-base">
               {t('returnCost') as string}{' '}
-              <span className="text-muted-foreground font-normal">
+              <span className="font-normal text-muted-foreground">
                 {t('optional') as string}
               </span>
             </Label>
           </div>
 
           <div className="relative">
-            <span className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
-              R$
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 font-medium text-muted-foreground sm:left-4">
+              {locale.currencySymbol}
             </span>
             <Input
               type="text"
               inputMode="decimal"
-              placeholder="0,00"
+              placeholder={locale.decimalExample}
               value={returnCost}
               onChange={e => handleCostChange(e.target.value, onReturnCostChange)}
-              className="pl-10 sm:pl-12 text-lg sm:text-2xl h-11 sm:h-14 font-semibold"
+              className="h-11 pl-10 text-lg font-semibold sm:h-14 sm:pl-12 sm:text-2xl"
             />
           </div>
 
@@ -153,35 +155,37 @@ export function TotalCostStep({
           )}
         </div>
 
-        {!isValid && (
-          <p className="text-sm text-muted-foreground text-center">
+        {!hasAnyCost && (
+          <p className="text-center text-sm text-muted-foreground">
             {t('atLeastOneRequired') as string}
           </p>
         )}
 
-        {/* BOTÕES */}
-        <div className="flex gap-3 pt-2">
+        {hasAnyCost && !payerSelectionValid && (
+          <p className="text-center text-sm text-muted-foreground">
+            {t('payerRequiredMessage') as string}
+          </p>
+        )}
 
+        <div className="flex gap-3 pt-2">
           <Button
             variant="outline"
             onClick={onBack}
-            className="flex-1 h-11 sm:h-12"
+            className="h-11 flex-1 sm:h-12"
           >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+            <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
             {t('back') as string}
           </Button>
 
           <Button
             onClick={onNext}
             disabled={!isValid}
-            className="flex-1 h-11 sm:h-12 text-base sm:text-lg font-semibold gradient-primary"
+            className="h-11 flex-1 gradient-primary text-base font-semibold sm:h-12 sm:text-lg"
           >
             {t('continue') as string}
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
+            <ArrowRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
           </Button>
-
         </div>
-
       </div>
     </div>
   )

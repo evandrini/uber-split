@@ -1,70 +1,97 @@
-# UberSplit
+﻿# UberSplit
 
-🌐 Live app  
-https://evandrini.github.io/uber-split/
+Aplicativo web para dividir corridas de Uber de forma justa quando existem multiplas paradas.
 
-UberSplit is a web app that solves a very common real-world problem:  
-how to split Uber rides fairly when there are multiple stops.
+App online: https://evandrini.github.io/uber-split/
 
-Most people simply split the total cost evenly, without considering that
-someone who leaves earlier should not pay for the rest of the trip.
-This often makes the person who lives closer pay more than they should.
+## O problema que ele resolve
+Quando um grupo divide a corrida por igual, quase sempre alguem paga a mais.
+Exemplo: quem desce antes nao deveria pagar pela parte final da viagem.
 
-UberSplit fixes that.
+O UberSplit calcula automaticamente quanto cada pessoa deve pagar com base no trecho que realmente percorreu.
 
----
+## Para quem serve
+- Grupos de amigos
+- Casais com amigos/familia
+- Corridas com ida e volta
+- Situacoes em que pessoas entram e saem em pontos diferentes
 
-## 🚗 When should you use UberSplit?
+## Como usar (bem simples)
+1. Adicione os participantes.
+2. Informe valor da ida e/ou volta.
+3. Selecione quem pagou cada corrida (obrigatorio para calcular transferencias finais).
+4. Monte as paradas e marque quem entra/sai em cada ponto.
+5. Clique em calcular.
 
-UberSplit is typically used **after the ride is finished**.
+## Simulacao rapida
+Cenario:
+- Corrida total: R$ 60,00
+- Trecho A -> B: 6 km (Ana e Bruno no carro)
+- Trecho B -> C: 3 km (apenas Bruno no carro)
 
-Once you know the total fare and the route taken,
-you enter the stops and who entered or left the car at each point.
+Passo 1: custo por km
+- Distancia total = 9 km
+- R$ 60,00 / 9 = R$ 6,67 por km
 
-The app calculates a fair split automatically.
+Passo 2: custo de cada trecho
+- A -> B: 6 km x 6,67 = R$ 40,02
+- B -> C: 3 km x 6,67 = R$ 20,01
 
-No mental math. No awkward discussions.
+Passo 3: divisao por quem estava no carro
+- A -> B (2 pessoas): R$ 40,02 / 2 = R$ 20,01 para cada
+- B -> C (1 pessoa): R$ 20,01 para Bruno
 
----
+Resultado final:
+- Ana: R$ 20,01
+- Bruno: R$ 40,02
 
-## ⚖️ What UberSplit calculates
+Ou seja, Bruno paga mais porque ficou mais tempo no carro.
 
-Each person pays only for the portion of the trip they actually used.
+## Regras de calculo (sem misterio)
+- A pessoa comeca a pagar no ponto em que entra.
+- Para de pagar no ponto em que sai.
+- Cada trecho e dividido apenas entre quem estava no carro naquele trecho.
+- O custo total da corrida e proporcional a distancia de cada trecho.
+- No final, o app calcula transferencias (quem paga para quem) com base em quem realmente pagou no Uber.
 
-Calculation rules:
+## Recursos atuais
+- Arrastar e reordenar paradas (drag and drop)
+- Copiar ida para volta com 1 clique (mantendo edicao manual)
+- Resultado com:
+  - total e distancia
+  - custo por pessoa
+  - transferencias finais
+  - resumo rapido de saldo
+  - grafico de quem ficou mais tempo no carro
+- Idiomas: Portugues, English, Espanol
+- Moeda automatica por idioma:
+  - pt-BR -> BRL (R$)
+  - en-US -> USD ($)
+  - es-ES -> EUR (EUR)
 
-- A person starts paying when they enter the ride
-- A person stops paying when they leave
-- Shared segments are divided equally
-- Individual segments are paid only by who remained
-- The result clearly shows who owes whom
-
----
-
-## 💡 Why this matters
-
-Splitting “evenly” is simple, but almost always unfair.
-
-People who leave earlier often:
-
-- pay for distance they did not travel
-- subsidize the rest of the group
-- or force everyone into confusing manual calculations
-
-UberSplit removes all of this and produces a fair result instantly.
-
----
-
-## 🛠 Tech Stack
-
+## Tecnologias
 - React
 - TypeScript
 - Vite
 - Tailwind CSS
+- dnd-kit
+- Framer Motion
 
----
+## Rodando localmente
+```bash
+npm install
+npm run dev
+```
 
-## 🎯 Project goal
+## Build de producao
+```bash
+npm run build
+```
 
-This project was created to solve a real everyday problem,
-with focus on clear business logic, simple UX and transparent cost calculation.
+## Deploy GitHub Pages
+```bash
+npm run deploy
+```
+
+## Objetivo do projeto
+Deixar uma conta que normalmente gera discussao em algo claro, justo e facil de explicar para qualquer pessoa.

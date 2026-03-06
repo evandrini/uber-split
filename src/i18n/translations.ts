@@ -1,19 +1,23 @@
-export type Language = 'pt-BR' | 'en-US';
+﻿export type Language = 'pt-BR' | 'en-US' | 'es-ES'
 
 export const translations = {
   'pt-BR': {
-    // Header
     appName: 'UberSplit',
-    tagline: 'Divida corridas de forma justa ✨',
+    tagline: 'Divida corridas de forma justa',
+    smartAssistantLabel: 'Assistente inteligente de divisão',
 
-    // Introduction
+    seoTitle: 'UberSplit | Calculadora para dividir corrida de Uber',
+    seoDescription:
+      'Calcule a divisão justa de corridas com múltiplas paradas. Cada pessoa paga apenas pelo trecho em que esteve no carro.',
+    seoKeywords:
+      'dividir uber, calculadora uber, dividir corrida, custo por trecho, dividir transporte',
+
     introTitle: 'Divisão justa de corridas',
-    introText: 'Este site ajuda a dividir corridas de Uber de forma justa quando existem múltiplas paradas. Cada pessoa paga apenas o trecho em que esteve no carro, evitando que quem mora mais perto pague pela viagem inteira dos outros.',
+    introText:
+      'Este app ajuda a dividir corridas de Uber de forma justa quando existem múltiplas paradas. Cada pessoa paga apenas o trecho em que esteve no carro.',
 
-    // Steps
     steps: ['Pessoas', 'Valor', 'Paradas', 'Resultado'],
 
-    // Participants step
     participantsTitle: 'Participantes',
     participantsSubtitle: 'Quem estava na corrida?',
     participantPlaceholder: 'Nome do participante',
@@ -21,24 +25,26 @@ export const translations = {
     minParticipants: 'Adicione pelo menos 2 participantes',
     continue: 'Continuar',
 
-    // Cost step
     costTitle: 'Valor da Corrida',
     costSubtitle: 'Informe os valores da ida e/ou volta',
-    outboundCost: 'Valor da Ida (R$)',
-    returnCost: 'Valor da Volta (R$)',
+    outboundCost: 'Valor da Ida',
+    returnCost: 'Valor da Volta',
     optional: '(opcional)',
     outboundPaidBy: 'Quem pagou a ida?',
     returnPaidBy: 'Quem pagou a volta?',
     selectPayer: 'Selecione quem pagou',
     atLeastOneRequired: 'Informe pelo menos um valor',
+    payerRequiredMessage: 'Selecione quem pagou para cada corrida com valor preenchido.',
 
-    // Stops step
     stopsTitle: 'Paradas',
     stopsSubtitle: 'Adicione origem, paradas e destino',
-    stopConfiguration: "Configuração da parada",
+    stopConfiguration: 'Configuração da parada',
     outboundTrip: 'Corrida de Ida',
     returnTrip: 'Corrida de Volta',
     useReverseRoute: 'Usar caminho inverso da ida',
+    copyOutboundToReturn: 'Copiar trajeto da ida',
+    autoFillReturnHint: 'Cria uma base automática da volta. Depois você pode editar tudo normalmente.',
+    autoLabel: 'Aplicar',
     origin: 'Origem',
     finalDestination: 'Destino final',
     intermediateStop: 'Parada intermediária',
@@ -48,12 +54,11 @@ export const translations = {
     minStops: 'Adicione pelo menos origem e destino',
     back: 'Voltar',
     calculate: 'Calcular',
-    returnRouteRequired: "Preencha o trajeto da volta antes de calcular.",
-    outboundRouteRequired: "Preencha o trajeto de ida antes de calcular.",
-    returnRouteSuggestion: "Você informou volta. Deseja copiar o caminho da ida automaticamente?",
+    returnRouteRequired: 'Preencha o trajeto da volta antes de calcular.',
+    outboundRouteRequired: 'Preencha o trajeto de ida antes de calcular.',
+    returnRouteSuggestion: 'Você informou volta. Deseja copiar o caminho da ida automaticamente?',
+    dragHint: 'Segure o ícone para mover a parada',
 
-
-    // Result step
     resultTitle: 'Resultado',
     resultSubtitle: 'Veja quanto cada um deve pagar',
     total: 'Total',
@@ -64,22 +69,32 @@ export const translations = {
     perPerson: 'Divisão por pessoa',
     legs: 'trecho',
     legsPlural: 'trechos',
+    settlementExplainTitle: 'Quem transfere para quem',
+    noSettlementNeeded: 'Não é necessário acerto final. A divisão já está equilibrada.',
+    missingPayerForSettlement: 'Selecione quem pagou (ida/volta) para calcular as transferências finais.',
+    settlementSummaryTitle: 'Resumo rápido do acerto',
+    shouldPayLabel: 'Deveria pagar',
+    paidLabel: 'Pagou',
+    balanceLabel: 'Saldo',
+    balancePositive: 'recebe',
+    balanceNegative: 'paga',
+    balanceZero: 'ok',
+    rideIntensityTitle: 'Quem ficou mais tempo no carro',
+    rideIntensitySubtitle: 'Estimativa baseada na distância percorrida em cada trecho.',
 
-    // Settlement
     finalSettlement: 'Acerto Final',
     mustPay: 'deve pagar',
     to: 'para',
 
-    // Actions
     shareWhatsApp: 'Compartilhar no WhatsApp',
     copied: 'Copiado!',
+    copyMessage: 'Copiar mensagem',
     edit: 'Editar',
     newRide: 'Nova Corrida',
     copySuccess: 'Copiado para a área de transferência!',
     copyError: 'Erro ao copiar',
 
-    // WhatsApp message
-    whatsappTitle: '🚗 *Divisão da Corrida de Uber*',
+    whatsappTitle: '🚕 *Divisão da Corrida de Uber*',
     whatsappOutbound: '📍 *Ida*',
     whatsappReturn: '📍 *Volta*',
     whatsappTotalValue: '💰 Valor',
@@ -89,18 +104,22 @@ export const translations = {
     whatsappCalculated: '_Calculado com UberSplit_ ✨',
   },
   'en-US': {
-    // Header
     appName: 'UberSplit',
-    tagline: 'Split rides fairly ✨',
+    tagline: 'Split rides fairly',
+    smartAssistantLabel: 'Smart split assistant',
 
-    // Introduction
+    seoTitle: 'UberSplit | Fair Uber Ride Split Calculator',
+    seoDescription:
+      'Calculate a fair ride split for multiple stops. Each person pays only for the part of the trip they actually traveled.',
+    seoKeywords:
+      'uber split calculator, split uber fare, ride split by distance, fair ride sharing, multi stop uber split',
+
     introTitle: 'Fair ride splitting',
-    introText: 'This site helps split Uber rides fairly when there are multiple stops. Each person pays only for the part of the trip they were actually in the car, so people who live closer are not overcharged.',
+    introText:
+      'This app helps split Uber rides fairly when there are multiple stops. Each person pays only for the part of the trip they were actually in the car.',
 
-    // Steps
     steps: ['People', 'Cost', 'Stops', 'Result'],
 
-    // Participants step
     participantsTitle: 'Participants',
     participantsSubtitle: 'Who was on the ride?',
     participantPlaceholder: 'Participant name',
@@ -108,7 +127,6 @@ export const translations = {
     minParticipants: 'Add at least 2 participants',
     continue: 'Continue',
 
-    // Cost step
     costTitle: 'Ride Cost',
     costSubtitle: 'Enter outbound and/or return costs',
     outboundCost: 'Outbound Cost',
@@ -118,14 +136,17 @@ export const translations = {
     returnPaidBy: 'Who paid for return?',
     selectPayer: 'Select who paid',
     atLeastOneRequired: 'Enter at least one cost',
+    payerRequiredMessage: 'Select who paid for each trip that has a cost.',
 
-    // Stops step
     stopsTitle: 'Stops',
     stopsSubtitle: 'Add origin, stops and destination',
-    stopConfiguration: "Stop configuration",
+    stopConfiguration: 'Stop configuration',
     outboundTrip: 'Outbound Trip',
     returnTrip: 'Return Trip',
-    useReverseRoute: 'Use reverse route',
+    useReverseRoute: 'Use reverse outbound route',
+    copyOutboundToReturn: 'Copy outbound route',
+    autoFillReturnHint: 'Creates an automatic return draft. You can still edit every stop.',
+    autoLabel: 'Apply',
     origin: 'Origin',
     finalDestination: 'Final destination',
     intermediateStop: 'Intermediate stop',
@@ -135,12 +156,11 @@ export const translations = {
     minStops: 'Add at least origin and destination',
     back: 'Back',
     calculate: 'Calculate',
-    returnRouteRequired: "Fill the return route before calculating.",
-    outboundRouteRequired: "Fill the outbound route before calculating.",
-    returnRouteSuggestion: "Return detected. Copy outbound route automatically?",
+    returnRouteRequired: 'Fill the return route before calculating.',
+    outboundRouteRequired: 'Fill the outbound route before calculating.',
+    returnRouteSuggestion: 'Return detected. Copy outbound route automatically?',
+    dragHint: 'Hold the handle to move the stop',
 
-
-    // Result step
     resultTitle: 'Result',
     resultSubtitle: 'See how much each person owes',
     total: 'Total',
@@ -151,22 +171,32 @@ export const translations = {
     perPerson: 'Per person breakdown',
     legs: 'leg',
     legsPlural: 'legs',
+    settlementExplainTitle: 'Who pays who',
+    noSettlementNeeded: 'No final transfers needed. The split is already balanced.',
+    missingPayerForSettlement: 'Select who paid (outbound/return) to calculate final transfers.',
+    settlementSummaryTitle: 'Quick settlement summary',
+    shouldPayLabel: 'Should pay',
+    paidLabel: 'Paid',
+    balanceLabel: 'Balance',
+    balancePositive: 'gets back',
+    balanceNegative: 'pays',
+    balanceZero: 'ok',
+    rideIntensityTitle: 'Who stayed longer in the car',
+    rideIntensitySubtitle: 'Estimate based on distance ridden across trip legs.',
 
-    // Settlement
     finalSettlement: 'Final Settlement',
     mustPay: 'must pay',
     to: 'to',
 
-    // Actions
     shareWhatsApp: 'Share on WhatsApp',
     copied: 'Copied!',
+    copyMessage: 'Copy message',
     edit: 'Edit',
     newRide: 'New Ride',
     copySuccess: 'Copied to clipboard!',
     copyError: 'Error copying',
 
-    // WhatsApp message
-    whatsappTitle: '🚗 *Uber Ride Split*',
+    whatsappTitle: '🚕 *Uber Ride Split*',
     whatsappOutbound: '📍 *Outbound*',
     whatsappReturn: '📍 *Return*',
     whatsappTotalValue: '💰 Total',
@@ -175,6 +205,112 @@ export const translations = {
     whatsappSettlement: '💸 *Final Settlement:*',
     whatsappCalculated: '_Calculated with UberSplit_ ✨',
   },
-} as const;
+  'es-ES': {
+    appName: 'UberSplit',
+    tagline: 'Divide viajes de forma justa',
+    smartAssistantLabel: 'Asistente inteligente de división',
 
-export type TranslationKey = keyof typeof translations['pt-BR'];
+    seoTitle: 'UberSplit | Calculadora para dividir viajes de Uber',
+    seoDescription:
+      'Calcula una división justa de viajes con múltiples paradas. Cada persona paga solo por el tramo que realmente recorrió.',
+    seoKeywords:
+      'dividir uber, calculadora uber, dividir viaje, costo por tramo, compartir transporte',
+
+    introTitle: 'División justa de viajes',
+    introText:
+      'Esta app ayuda a dividir viajes de Uber de forma justa cuando hay múltiples paradas. Cada persona paga solo por el tramo en el que estuvo en el coche.',
+
+    steps: ['Personas', 'Costo', 'Paradas', 'Resultado'],
+
+    participantsTitle: 'Participantes',
+    participantsSubtitle: '¿Quién estuvo en el viaje?',
+    participantPlaceholder: 'Nombre del participante',
+    addParticipant: 'Agregar',
+    minParticipants: 'Agrega al menos 2 participantes',
+    continue: 'Continuar',
+
+    costTitle: 'Costo del Viaje',
+    costSubtitle: 'Ingresa los valores de ida y/o vuelta',
+    outboundCost: 'Costo de Ida',
+    returnCost: 'Costo de Vuelta',
+    optional: '(opcional)',
+    outboundPaidBy: '¿Quién pagó la ida?',
+    returnPaidBy: '¿Quién pagó la vuelta?',
+    selectPayer: 'Selecciona quién pagó',
+    atLeastOneRequired: 'Ingresa al menos un valor',
+    payerRequiredMessage: 'Selecciona quién pagó en cada viaje con costo.',
+
+    stopsTitle: 'Paradas',
+    stopsSubtitle: 'Agrega origen, paradas y destino',
+    stopConfiguration: 'Configuración de la parada',
+    outboundTrip: 'Viaje de Ida',
+    returnTrip: 'Viaje de Vuelta',
+    useReverseRoute: 'Usar ruta inversa de la ida',
+    copyOutboundToReturn: 'Copiar ruta de ida',
+    autoFillReturnHint: 'Crea un borrador automático de la vuelta. Luego puedes editar todo normalmente.',
+    autoLabel: 'Aplicar',
+    origin: 'Origen',
+    finalDestination: 'Destino final',
+    intermediateStop: 'Parada intermedia',
+    whoExitsHere: '¿Quién baja aquí?',
+    whoEntersHere: '¿Quién sube aquí?',
+    addStop: 'Agregar Parada',
+    minStops: 'Agrega al menos origen y destino',
+    back: 'Volver',
+    calculate: 'Calcular',
+    returnRouteRequired: 'Completa la ruta de vuelta antes de calcular.',
+    outboundRouteRequired: 'Completa la ruta de ida antes de calcular.',
+    returnRouteSuggestion: 'Se detectó vuelta. ¿Quieres copiar la ruta de ida automáticamente?',
+    dragHint: 'Mantén presionado el ícono para mover la parada',
+
+    resultTitle: 'Resultado',
+    resultSubtitle: 'Mira cuánto debe pagar cada persona',
+    total: 'Total',
+    distance: 'Distancia',
+    whoPaid: 'Quién pagó',
+    outbound: 'Ida',
+    return: 'Vuelta',
+    perPerson: 'Desglose por persona',
+    legs: 'tramo',
+    legsPlural: 'tramos',
+    settlementExplainTitle: 'Quién paga a quién',
+    noSettlementNeeded: 'No hace falta ajuste final. La división ya está equilibrada.',
+    missingPayerForSettlement: 'Selecciona quién pagó (ida/vuelta) para calcular las transferencias finales.',
+    settlementSummaryTitle: 'Resumen rápido del ajuste',
+    shouldPayLabel: 'Debería pagar',
+    paidLabel: 'Pagó',
+    balanceLabel: 'Saldo',
+    balancePositive: 'recibe',
+    balanceNegative: 'paga',
+    balanceZero: 'ok',
+    rideIntensityTitle: 'Quién estuvo más tiempo en el coche',
+    rideIntensitySubtitle: 'Estimación basada en la distancia recorrida en cada tramo.',
+
+    finalSettlement: 'Ajuste Final',
+    mustPay: 'debe pagar',
+    to: 'a',
+
+    shareWhatsApp: 'Compartir en WhatsApp',
+    copied: '¡Copiado!',
+    copyMessage: 'Copiar mensaje',
+    edit: 'Editar',
+    newRide: 'Nuevo Viaje',
+    copySuccess: '¡Copiado al portapapeles!',
+    copyError: 'Error al copiar',
+
+    whatsappTitle: '🚕 *División del Viaje de Uber*',
+    whatsappOutbound: '📍 *Ida*',
+    whatsappReturn: '📍 *Vuelta*',
+    whatsappTotalValue: '💰 Total',
+    whatsappDistance: '📍 Distancia',
+    whatsappHowMuchEach: '*Cuánto debería pagar cada uno:*',
+    whatsappSettlement: '💸 *Ajuste Final:*',
+    whatsappCalculated: '_Calculado con UberSplit_ ✨',
+  },
+} as const
+
+export type TranslationKey = keyof typeof translations['pt-BR']
+
+
+
+

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Users, Plus, Trash2, ArrowRight } from 'lucide-react';
-import { Participant } from '@/types/ride';
+import type { Participant } from '@/types/ride';
 import { useLanguage } from '@/i18n/LanguageContext';
 
 interface ParticipantsStepProps {
@@ -20,8 +20,20 @@ export function ParticipantsStep({
   const [newName, setNewName] = useState('');
   const { t } = useLanguage();
 
+  const normalizeName = (value: string) => {
+    if (!value) return value;
+    const firstNonSpace = value.search(/\S/);
+    if (firstNonSpace === -1) return value;
+
+    return (
+      value.slice(0, firstNonSpace) +
+      value.charAt(firstNonSpace).toUpperCase() +
+      value.slice(firstNonSpace + 1)
+    );
+  };
+
   const addParticipant = () => {
-    const name = newName.trim() || `${t('participantsTitle').toString().slice(0, -1)} ${participants.length + 1}`;
+    const name = normalizeName(newName.trim()) || `${t('participantsTitle').toString().slice(0, -1)} ${participants.length + 1}`;
     onParticipantsChange([
       ...participants,
       { id: crypto.randomUUID(), name },
@@ -67,7 +79,7 @@ export function ParticipantsStep({
           <Input
             placeholder={t('participantPlaceholder') as string}
             value={newName}
-            onChange={e => setNewName(e.target.value)}
+            onChange={e => setNewName(normalizeName(e.target.value))}
             onKeyPress={handleKeyPress}
             className="flex-1"
           />
@@ -92,7 +104,7 @@ export function ParticipantsStep({
               </div>
               <Input
                 value={participant.name}
-                onChange={e => updateParticipantName(participant.id, e.target.value)}
+                onChange={e => updateParticipantName(participant.id, normalizeName(e.target.value))}
                 className="flex-1 border-0 bg-transparent focus-visible:ring-0 px-2"
               />
               <Button

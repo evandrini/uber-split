@@ -15,7 +15,7 @@ import type { Participant, Settlement, FullRideCalculation, UberSplitDebugObject
 import { formatCurrency, generateWhatsAppText } from '@/utils/rideCalculator'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useLanguage } from '@/i18n/LanguageContext'
+import { APP_URL, useLanguage } from '@/i18n/LanguageContext'
 
 type SettlementSummaryRow = {
   participantId: string
@@ -53,7 +53,6 @@ export function ResultStep({
 
   const buildShareMessage = () => {
     const baseText = generateWhatsAppText(fullCalculation, settlements, language)
-    const siteUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
     const promoText =
       language === 'pt-BR'
@@ -62,7 +61,7 @@ export function ResultStep({
           ? '\n\nHaz tu propia división aquí:\n'
           : '\n\nSplit your ride here:\n'
 
-    return baseText + promoText + siteUrl
+    return baseText + promoText + APP_URL
   }
 
   const handleCopy = async () => {

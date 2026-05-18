@@ -12,7 +12,7 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-const APP_URL = 'https://evandrini.github.io/uber-split/'
+export const APP_URL = 'https://evandrini.github.io/uber-split/'
 
 function normalizeLanguage(value: string | null | undefined): Language | null {
   if (!value) return null

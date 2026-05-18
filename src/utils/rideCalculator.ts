@@ -1,9 +1,134 @@
 ﻿import type { Participant, Stop, Leg, ParticipantCost, RideCalculation, Settlement, FullRideCalculation } from '@/types/ride'
 import type { Language } from '@/i18n/translations'
+import type { TripDebugCalculation } from '@/types/ride'
 import { translations } from '@/i18n/translations'
 import { getLocaleConfig } from '@/i18n/localeConfig'
 
-export function calculateLegs(stops: Stop[], participants: Participant[]): Leg[] {
+const isDebugMode = () => import.meta.env.DEV
+
+const getStopLabel = (stop: Stop) => stop.name || stop.address || `Stop ${stop.id}`
+
+const formatDebugCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value)
+
+const formatNameList = (names: string[]) => (names.length > 0 ? names.join(', ') : '-')
+
+const buildTripDebugCalculation = (
+  totalCost: number,
+  totalDistance: number,
+  legs: Leg[],
+  participants: Participant[],
+  participantCosts: ParticipantCost[],
+  paidById?: string
+): TripDebugCalculation => {
+  const participantById = new Map(participants.map(participant => [participant.id, participant]))
+  const participantName = (participantId: string) =>
+    participantById.get(participantId)?.name || participantId
+  const allStops = legs.length > 0 ? [legs[0].fromStop, ...legs.map(leg => leg.toStop)] : []
+  const costPerKm = totalDistance > 0 ? totalCost / totalDistance : 0
+  const insideCar = new Set<string>()
+
+  const debugStops = allStops.map((stop, index) => {
+    stop.exiting.forEach(participantId => insideCar.delete(participantId))
+    stop.entering.forEach(participantId => insideCar.add(participantId))
+
+    return {
+      index: index + 1,
+      stopId: stop.id,
+      label: getStopLabel(stop),
+      entering: stop.entering.map(participantName),
+      exiting: stop.exiting.map(participantName),
+      insideCar: Array.from(insideCar).map(participantName),
+    }
+  })
+
+  const debugLegs = legs.map((leg, index) => {
+    const legCost = leg.distance * costPerKm
+    const splitAmount = leg.passengers.length > 0 ? legCost / leg.passengers.length : 0
+
+    return {
+      index: index + 1,
+      from: getStopLabel(leg.fromStop),
+      to: getStopLabel(leg.toStop),
+      distance: leg.distance,
+      passengers: leg.passengers.map(participantName),
+      cost: legCost,
+      costSplit: leg.passengers.map(participantId => ({
+        participantId,
+        participantName: participantName(participantId),
+        amount: splitAmount,
+      })),
+    }
+  })
+
+  const totals = participantCosts.map(cost => ({
+    participantId: cost.participantId,
+    participantName: cost.participantName,
+    totalCost: cost.totalCost,
+  }))
+
+  const logLines: string[] = []
+
+  debugStops.forEach((stop, index) => {
+    logLines.push(`STOP ${stop.index}`)
+    logLines.push(`Entering: ${formatNameList(stop.entering)}`)
+    logLines.push(`Exiting: ${formatNameList(stop.exiting)}`)
+    logLines.push(`Inside car: ${formatNameList(stop.insideCar)}`)
+
+    const leg = debugLegs[index]
+    if (!leg) return
+
+    logLines.push('')
+    logLines.push(`LEG ${leg.index}`)
+    logLines.push(`From: ${leg.from}`)
+    logLines.push(`To: ${leg.to}`)
+    logLines.push(`Distance: ${leg.distance.toFixed(2)} km`)
+    logLines.push(`Passengers: ${formatNameList(leg.passengers)}`)
+    logLines.push(`Cost: ${formatDebugCurrency(leg.cost)}`)
+    logLines.push('Cost split:')
+
+    if (leg.costSplit.length > 0) {
+      leg.costSplit.forEach(split => {
+        logLines.push(`${split.participantName}: ${formatDebugCurrency(split.amount)}`)
+      })
+    } else {
+      logLines.push('-')
+    }
+
+    logLines.push('')
+  })
+
+  logLines.push('FINAL TOTALS')
+  totals.forEach(total => {
+    logLines.push(`${total.participantName}: ${formatDebugCurrency(total.totalCost)}`)
+  })
+
+  return {
+    totalCost,
+    totalDistance,
+    costPerKm,
+    paidById,
+    paidByName: paidById ? participantName(paidById) : undefined,
+    stops: debugStops,
+    legs: debugLegs,
+    totals,
+    log: logLines.join('\n').trim(),
+  }
+}
+
+const logTripDebugCalculation = (label: string, debug: TripDebugCalculation) => {
+  if (!isDebugMode()) return
+
+  console.groupCollapsed(`[Uber Split Debug] ${label}`)
+  console.log(debug.log)
+  console.log(debug)
+  console.groupEnd()
+}
+
+export function calculateLegs(stops: Stop[], _participants: Participant[]): Leg[] {
   const legs: Leg[] = [];
   let currentPassengers: string[] = [];
 
@@ -35,23 +160,6 @@ export function calculateCosts(
   paidById?: string
 ): RideCalculation {
   const totalDistance = legs.reduce((sum, leg) => sum + leg.distance, 0);
-  
-  if (totalDistance === 0) {
-    return {
-      totalCost,
-      totalDistance: 0,
-      participantCosts: participants.map(p => ({
-        participantId: p.id,
-        participantName: p.name,
-        totalCost: 0,
-        legDetails: [],
-      })),
-      legs,
-      paidById,
-    };
-  }
-
-  const costPerKm = totalCost / totalDistance;
   const participantCosts: Map<string, ParticipantCost> = new Map();
 
   // Initialize participant costs
@@ -63,6 +171,32 @@ export function calculateCosts(
       legDetails: [],
     });
   });
+
+  if (totalDistance === 0) {
+    const participantCostsList = Array.from(participantCosts.values());
+    const debug = isDebugMode()
+      ? buildTripDebugCalculation(
+          totalCost,
+          0,
+          legs,
+          participants,
+          participantCostsList,
+          paidById
+        )
+      : undefined;
+    if (debug) logTripDebugCalculation('Trip', debug);
+
+    return {
+      totalCost,
+      totalDistance: 0,
+      participantCosts: participantCostsList,
+      legs,
+      paidById,
+      debug,
+    };
+  }
+
+  const costPerKm = totalCost / totalDistance;
 
   // Calculate costs for each leg
   legs.forEach(leg => {
@@ -87,12 +221,26 @@ export function calculateCosts(
     }
   });
 
+  const participantCostsList = Array.from(participantCosts.values());
+  const debug = isDebugMode()
+    ? buildTripDebugCalculation(
+        totalCost,
+        totalDistance,
+        legs,
+        participants,
+        participantCostsList,
+        paidById
+      )
+    : undefined;
+  if (debug) logTripDebugCalculation('Trip', debug);
+
   return {
     totalCost,
     totalDistance,
-    participantCosts: Array.from(participantCosts.values()),
+    participantCosts: participantCostsList,
     legs,
     paidById,
+    debug,
   };
 }
 
@@ -137,13 +285,35 @@ export function combineCalculations(
 
   const totalCost = (outbound?.totalCost || 0) + (returnTrip?.totalCost || 0);
   const totalDistance = (outbound?.totalDistance || 0) + (returnTrip?.totalDistance || 0);
+  const combinedCostsList = Array.from(combinedCosts.values());
+  const debugTotals = isDebugMode()
+    ? combinedCostsList.map(cost => ({
+        participantId: cost.participantId,
+        participantName: cost.participantName,
+        totalCost: cost.totalCost,
+      }))
+    : [];
+  const debug = isDebugMode()
+    ? {
+        outbound: outbound?.debug,
+        return: returnTrip?.debug,
+        totals: debugTotals,
+        log: [
+          outbound?.debug ? `OUTBOUND\n${outbound.debug.log}` : '',
+          returnTrip?.debug ? `RETURN\n${returnTrip.debug.log}` : '',
+          'FINAL TOTALS',
+          ...debugTotals.map(total => `${total.participantName}: ${formatDebugCurrency(total.totalCost)}`),
+        ].filter(Boolean).join('\n\n'),
+      }
+    : undefined;
 
   return {
     outbound,
     return: returnTrip,
-    combinedCosts: Array.from(combinedCosts.values()),
+    combinedCosts: combinedCostsList,
     totalCost,
     totalDistance,
+    debug,
   };
 }
 

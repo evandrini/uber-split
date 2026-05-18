@@ -10,7 +10,8 @@ import {
   Share2,
   Wallet,
 } from 'lucide-react'
-import type { Participant, Settlement, FullRideCalculation } from '@/types/ride'
+import { DebugPanel } from '@/components/DebugPanel'
+import type { Participant, Settlement, FullRideCalculation, UberSplitDebugObject } from '@/types/ride'
 import { formatCurrency, generateWhatsAppText } from '@/utils/rideCalculator'
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -84,6 +85,13 @@ export function ResultStep({
   const sortedCosts = [...fullCalculation.combinedCosts]
     .filter(cost => cost.totalCost > 0)
     .sort((a, b) => b.totalCost - a.totalCost)
+
+  const debugObject: UberSplitDebugObject | undefined = fullCalculation.debug
+    ? {
+        ...fullCalculation.debug,
+        settlements,
+      }
+    : undefined
 
   const outboundPayer = fullCalculation.outbound?.paidById
     ? participants.find(participant => participant.id === fullCalculation.outbound?.paidById)
@@ -399,6 +407,8 @@ export function ResultStep({
           </div>
         </div>
       )}
+
+      <DebugPanel debug={debugObject} />
 
       <div className="space-y-2 sm:space-y-3">
         <Button

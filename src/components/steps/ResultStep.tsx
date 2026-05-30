@@ -10,11 +10,12 @@ import {
   Share2,
   Wallet,
 } from 'lucide-react'
-import type { Participant, Settlement, FullRideCalculation } from '@/types/ride'
+import { DebugPanel } from '@/components/DebugPanel'
+import type { Participant, Settlement, FullRideCalculation, UberSplitDebugObject } from '@/types/ride'
 import { formatCurrency, generateWhatsAppText } from '@/utils/rideCalculator'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { useLanguage } from '@/i18n/LanguageContext'
+import { APP_URL, useLanguage } from '@/i18n/LanguageContext'
 
 type SettlementSummaryRow = {
   participantId: string
@@ -52,7 +53,6 @@ export function ResultStep({
 
   const buildShareMessage = () => {
     const baseText = generateWhatsAppText(fullCalculation, settlements, language)
-    const siteUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
     const promoText =
       language === 'pt-BR'
@@ -61,7 +61,7 @@ export function ResultStep({
           ? '\n\nHaz tu propia división aquí:\n'
           : '\n\nSplit your ride here:\n'
 
-    return baseText + promoText + siteUrl
+    return baseText + promoText + APP_URL
   }
 
   const handleCopy = async () => {
@@ -84,6 +84,13 @@ export function ResultStep({
   const sortedCosts = [...fullCalculation.combinedCosts]
     .filter(cost => cost.totalCost > 0)
     .sort((a, b) => b.totalCost - a.totalCost)
+
+  const debugObject: UberSplitDebugObject | undefined = fullCalculation.debug
+    ? {
+        ...fullCalculation.debug,
+        settlements,
+      }
+    : undefined
 
   const outboundPayer = fullCalculation.outbound?.paidById
     ? participants.find(participant => participant.id === fullCalculation.outbound?.paidById)
@@ -399,6 +406,8 @@ export function ResultStep({
           </div>
         </div>
       )}
+
+      <DebugPanel debug={debugObject} />
 
       <div className="space-y-2 sm:space-y-3">
         <Button

@@ -85,9 +85,9 @@ const Index = () => {
     hapticPulse([8, 20, 8])
 
     const reversedStops = buildReverseStops(outboundTrip.stops)
-    const reversedLegs = calculateLegs(reversedStops, participants).map(leg => ({
+    const reversedLegs = calculateLegs(reversedStops, participants).map((leg, index) => ({
       ...leg,
-      distance: 0,
+      distance: outboundTrip.legs[outboundTrip.legs.length - 1 - index]?.distance || 0,
     }))
 
     setReturnTrip(prev => ({
@@ -202,6 +202,19 @@ const Index = () => {
       returnCalc,
       participants
     )
+    const settlements = calculateSettlements(combined, participants)
+
+    if (import.meta.env.DEV && combined.debug) {
+      window.__UBER_SPLIT_DEBUG__ = {
+        ...combined.debug,
+        settlements,
+      }
+
+      console.groupCollapsed('[Uber Split Debug] Full calculation')
+      console.log(window.__UBER_SPLIT_DEBUG__.log)
+      console.log(window.__UBER_SPLIT_DEBUG__)
+      console.groupEnd()
+    }
 
     setFullCalculation(combined)
     goToStep(4, [10, 30, 14])
@@ -218,6 +231,9 @@ const Index = () => {
     setOutboundTrip({ stops: [], legs: [], cost: '', paidBy: '' })
     setReturnTrip({ stops: [], legs: [], cost: '', paidBy: '' })
     setFullCalculation(null)
+    if (import.meta.env.DEV) {
+      delete window.__UBER_SPLIT_DEBUG__
+    }
   }
 
   const steps = t('steps') as readonly string[]

@@ -416,6 +416,16 @@ function TripStopsEditor({
         <SortableContext items={stopIds} strategy={verticalListSortingStrategy}>
           {trip.stops.map((stop, index) => {
             const stopState = stopStates[index]
+            const isFirstStop = index === 0
+            const isFinalDestination = index === trip.stops.length - 1
+            const addressPlaceholder = isFirstStop
+              ? (t('origin') as string)
+              : isFinalDestination
+                ? (t('finalDestination') as string)
+                : (t('intermediateStop') as string)
+            const configurationLabel = isFinalDestination
+              ? (t('finalDestinationConfiguration') as string)
+              : (t('stopConfiguration') as string)
 
             return (
               <SortableStop key={stop.id} id={stop.id}>
@@ -443,7 +453,7 @@ function TripStopsEditor({
 
                       <div className="relative min-w-0 flex-1">
                         <Input
-                          placeholder={index === 0 ? (t('origin') as string) : (t('addStop') as string)}
+                          placeholder={addressPlaceholder}
                           value={stop.address}
                           onChange={event => {
                             const value = event.target.value
@@ -534,7 +544,7 @@ function TripStopsEditor({
                     </div>
 
                     <div className="mt-4 space-y-4 border-t border-border/70 pt-4">
-                      <span className="text-sm font-semibold">{t('stopConfiguration') as string}</span>
+                      <span className="text-sm font-semibold">{configurationLabel}</span>
 
                       {index > 0 && (
                         <div className="space-y-2">

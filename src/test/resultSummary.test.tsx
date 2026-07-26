@@ -1,11 +1,23 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitForElementToBeRemoved } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, waitForElementToBeRemoved } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { translations } from '@/i18n/translations'
 import { calculateCosts, calculateLegs, combineCalculations } from '@/utils/rideCalculator'
 import type { Participant, Stop } from '@/types/ride'
 
+const storageMock = vi.hoisted(() => ({
+  create: vi.fn(),
+}))
+
+vi.mock('@/utils/sharedRideStorage', () => ({
+  sharedRideStorage: storageMock,
+  createShortRideUrl: (baseUrl: string, id: string) => {
+    const url = new URL(baseUrl)
+    url.searchParams.set('s', id)
+    return url.toString()
+  },
+}))
 vi.mock('@/components/RouteSummaryMap', () => ({
   RouteSummaryMap: () => (
     <div data-testid="route-map">
@@ -25,7 +37,10 @@ vi.mock('@/i18n/LanguageContext', () => ({
 
 import { ResultStep } from '@/components/steps/ResultStep'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
 
 const participants: Participant[] = [
   { id: 'bruno', name: 'Bruno' },
@@ -109,5 +124,68 @@ describe('result information hierarchy', () => {
     const button = screen.getByRole('button', { name: /copiar link do resultado/i })
     expect(button).toHaveClass('h-10', 'text-sm', 'sm:w-auto')
     expect(button).not.toHaveClass('gradient-primary')
+  })
+
+  it('creates a short link only after sharing and never includes ride payload', async () => {
+    storageMock.create.mockResolvedValue('K8mP2xQz')
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    render(
+      <ResultStep
+        fullCalculation={fullCalculation}
+        participants={participants}
+        settlements={[]}
+        onBack={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    )
+
+    expect(storageMock.create).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /compartilhar resultado/i }))
+
+    await waitFor(() =>
+      expect(
+        open.mock.calls.some(call => String(call[0]).includes('wa.me')),
+      ).toBe(true),
+    )
+    expect(storageMock.create).toHaveBeenCalledTimes(1)
+    const whatsappUrl = String(
+      open.mock.calls.find(call => String(call[0]).includes('wa.me'))?.[0],
+    )
+    const message = decodeURIComponent(whatsappUrl.split('text=')[1])
+    expect(message).toContain('?s=K8mP2xQz')
+    expect(message).not.toContain('?ride=')
+
+    fireEvent.click(screen.getByRole('button', { name: /compartilhar resultado/i }))
+    await waitFor(() => expect(open).toHaveBeenCalledTimes(4))
+    expect(storageMock.create).toHaveBeenCalledTimes(1)
+  })
+
+  it('shares only the summary when short-link creation fails', async () => {
+    storageMock.create.mockRejectedValue(new Error('offline'))
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    render(
+      <ResultStep
+        fullCalculation={fullCalculation}
+        participants={participants}
+        settlements={[]}
+        onBack={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: /compartilhar resultado/i }))
+    await waitFor(() =>
+      expect(
+        open.mock.calls.some(call => String(call[0]).includes('wa.me')),
+      ).toBe(true),
+    )
+
+    const whatsappUrl = String(
+      open.mock.calls.find(call => String(call[0]).includes('wa.me'))?.[0],
+    )
+    const message = decodeURIComponent(whatsappUrl.split('text=')[1])
+    expect(message).toContain('Resultado calculado com UberSplit.')
+    expect(message).not.toContain('http')
+    expect(screen.getByRole('button', { name: /copiar link longo/i })).toBeInTheDocument()
   })
 })

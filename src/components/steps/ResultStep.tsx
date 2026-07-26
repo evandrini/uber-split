@@ -14,7 +14,7 @@ import { DebugPanel } from '@/components/DebugPanel'
 import { RouteMapErrorBoundary } from '@/components/RouteMapErrorBoundary'
 import { RouteSummaryMap } from '@/components/RouteSummaryMap'
 import type { Participant, Settlement, FullRideCalculation, RideCalculation, UberSplitDebugObject } from '@/types/ride'
-import { formatCurrency, generateWhatsAppText } from '@/utils/rideCalculator'
+import { formatCurrency } from '@/utils/rideCalculator'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { APP_URL, useLanguage } from '@/i18n/LanguageContext'
@@ -25,6 +25,10 @@ import {
 } from '@/utils/sharedRide'
 import { buildSharedRideMessage } from '@/utils/shareMessage'
 import { getStopLabel as getStopLetter } from '@/utils/stopLabels'
+import {
+  createShortRideUrl,
+  sharedRideStorage,
+} from '@/utils/sharedRideStorage'
 
 type SettlementSummaryRow = {
   participantId: string
@@ -59,6 +63,8 @@ export function ResultStep({
   const [copied, setCopied] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
   const [includeFullAddresses, setIncludeFullAddresses] = useState(false)
+  const [isCreatingShare, setIsCreatingShare] = useState(false)
+  const [showLongLinkFallback, setShowLongLinkFallback] = useState(false)
   const [selectedTrip, setSelectedTrip] = useState<'outbound' | 'return'>(
     fullCalculation.outbound ? 'outbound' : 'return',
   )
@@ -66,6 +72,14 @@ export function ResultStep({
     fullCalculation.outbound ? 'outbound' : fullCalculation.return ? 'return' : null,
   )
   const transitionTimerRef = useRef<number>()
+  const shortLinkCacheRef = useRef<{
+    fingerprint: string
+    url: string
+  } | null>(null)
+  const shortLinkRequestRef = useRef<{
+    fingerprint: string
+    request: Promise<string>
+  } | null>(null)
   const { t, language } = useLanguage()
   const shouldReduceMotion = useReducedMotion()
 
@@ -79,29 +93,51 @@ export function ResultStep({
     transition: { ...springTransition, delay },
   })
 
-  const buildShareLink = () =>
-    createSharedRideUrl(
-      APP_URL,
-      createSharedRidePayload(
-        fullCalculation,
-        participants,
-        language,
-        includeFullAddresses,
-      ),
+  const buildPayload = () =>
+    createSharedRidePayload(
+      fullCalculation,
+      participants,
+      language,
+      includeFullAddresses,
     )
 
-  const buildShareMessage = () => {
-    try {
-      return buildSharedRideMessage(settlements, language, buildShareLink())
-    } catch {
-      toast.error(t('linkUnavailable') as string)
-      return generateWhatsAppText(fullCalculation, settlements, language)
+  const buildLongShareLink = () =>
+    createSharedRideUrl(APP_URL, buildPayload())
+
+  const getOrCreateShortLink = async () => {
+    const payload = buildPayload()
+    const fingerprint = JSON.stringify(payload)
+    if (shortLinkCacheRef.current?.fingerprint === fingerprint) {
+      return shortLinkCacheRef.current.url
     }
+    if (shortLinkRequestRef.current?.fingerprint === fingerprint) {
+      return shortLinkRequestRef.current.request
+    }
+
+    setIsCreatingShare(true)
+    const request = sharedRideStorage
+      .create(payload)
+      .then(id => {
+        const url = createShortRideUrl(APP_URL, id)
+        shortLinkCacheRef.current = { fingerprint, url }
+        setShowLongLinkFallback(false)
+        return url
+      })
+      .finally(() => {
+        if (shortLinkRequestRef.current?.fingerprint === fingerprint) {
+          shortLinkRequestRef.current = null
+          setIsCreatingShare(false)
+        }
+      })
+    shortLinkRequestRef.current = { fingerprint, request }
+    return request
   }
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(buildShareMessage())
+      await navigator.clipboard.writeText(
+        buildSharedRideMessage(settlements, language),
+      )
       setCopied(true)
       toast.success(t('copySuccess') as string)
       setTimeout(() => setCopied(false), 2000)
@@ -110,16 +146,39 @@ export function ResultStep({
     }
   }
 
-  const handleShare = () => {
-    const message = buildShareMessage()
+  const handleShare = async () => {
+    const shareWindow = window.open('', '_blank')
+    let shortUrl: string | undefined
+    try {
+      shortUrl = await getOrCreateShortLink()
+    } catch {
+      setShowLongLinkFallback(true)
+      toast.warning(t('shortLinkUnavailable') as string)
+    }
+    const message = buildSharedRideMessage(settlements, language, shortUrl)
     const encoded = encodeURIComponent(message)
-    window.open(`https://wa.me/?text=${encoded}`, '_blank')
+    const whatsappUrl = `https://wa.me/?text=${encoded}`
+    if (shareWindow) {
+      shareWindow.location.href = whatsappUrl
+    } else {
+      window.open(whatsappUrl, '_blank')
+    }
   }
 
   const handleCopyLink = async () => {
     try {
-      await navigator.clipboard.writeText(buildShareLink())
+      await navigator.clipboard.writeText(await getOrCreateShortLink())
       toast.success(t('linkCopied') as string)
+    } catch {
+      setShowLongLinkFallback(true)
+      toast.warning(t('shortLinkUnavailable') as string)
+    }
+  }
+
+  const handleCopyLongLink = async () => {
+    try {
+      await navigator.clipboard.writeText(buildLongShareLink())
+      toast.success(t('longLinkCopied') as string)
     } catch {
       toast.error(t('linkUnavailable') as string)
     }
@@ -643,10 +702,13 @@ export function ResultStep({
         <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
           <Button
             onClick={handleShare}
+            disabled={isCreatingShare}
             className="h-11 w-full gradient-primary text-sm sm:h-12 sm:text-base btn-slide"
           >
             <Share2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-            {t('shareWhatsApp') as string}
+            {isCreatingShare
+              ? (t('creatingShareLink') as string)
+              : (t('shareResult') as string)}
           </Button>
         </motion.div>
 
@@ -668,13 +730,34 @@ export function ResultStep({
               variant="outline"
               size="sm"
               onClick={handleCopyLink}
+              disabled={isCreatingShare}
               className="h-10 w-full gap-2 rounded-xl border-white/70 bg-white/55 px-4 text-sm font-medium shadow-sm backdrop-blur sm:w-auto btn-pop"
             >
               <Link className="h-4 w-4" />
-              {t('copyRideLink') as string}
+              {isCreatingShare
+                ? (t('creatingShareLink') as string)
+                : (t('copyRideLink') as string)}
             </Button>
           </motion.div>
         </div>
+
+        {showLongLinkFallback && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3">
+            <p className="text-xs text-amber-900">
+              {t('longLinkFallbackNotice') as string}
+            </p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleCopyLongLink}
+              className="mt-2 h-8 px-2 text-xs text-amber-900"
+            >
+              <Link className="mr-1.5 h-3.5 w-3.5" />
+              {t('copyLongLink') as string}
+            </Button>
+          </div>
+        )}
 
         <div className="flex gap-2 sm:gap-3">
           <motion.div className="flex-1" whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>

@@ -21,10 +21,18 @@ describe('shared ride message', () => {
         '',
         'Evandro deve pagar R$ 21,64 para Bruno.',
         '',
-        'Confira os detalhes da divisão:',
+        'Veja o resultado completo:',
         url,
       ].join('\n'),
     )
+  })
+
+  it('shares only the summary when a short URL is unavailable', () => {
+    const message = buildSharedRideMessage(settlements, 'pt-BR')
+
+    expect(message).toContain('Resultado calculado com UberSplit.')
+    expect(message).not.toContain('http')
+    expect(message).not.toContain('?ride=')
   })
 
   it('formats the English message and lists multiple transfers separately', () => {

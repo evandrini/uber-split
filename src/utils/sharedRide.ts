@@ -48,9 +48,11 @@ const MAX_STOPS = 20
 
 const withoutResidentialDetails = (value: string) =>
   value
-    .replace(/\b\d+[A-Za-z]?(?:[-/]\d+)?\b/g, '')
+    .replace(/^\s*\d+[A-Za-z]?(?:[-/]\d+)?\s*[-,]?\s*/, '')
+    .replace(/(?:,\s*|\s+)\d+[A-Za-z]?(?:[-/]\d+)?\s*$/, '')
     .replace(/\s{2,}/g, ' ')
     .replace(/\s+,/g, ',')
+    .replace(/,\s*$/, '')
     .trim()
 
 const compactParticipantId = (index: number) =>
@@ -364,6 +366,11 @@ const parseCompactPayload = (value: unknown): SharedRidePayload | null => {
   }
 }
 
+export const decodeSharedRidePayload = (
+  value: unknown,
+): SharedRidePayload | null =>
+  parseCompactPayload(value) ?? parseLegacyPayload(value)
+
 export const decodeSharedRide = (encoded: string): SharedRidePayload | null => {
   if (!encoded || encoded.length > MAX_PAYLOAD_LENGTH) return null
 
@@ -372,7 +379,7 @@ export const decodeSharedRide = (encoded: string): SharedRidePayload | null => {
     if (!decompressed || decompressed.length > MAX_PAYLOAD_LENGTH) return null
     const value = JSON.parse(decompressed) as unknown
 
-    return parseCompactPayload(value) ?? parseLegacyPayload(value)
+    return decodeSharedRidePayload(value)
   } catch {
     return null
   }

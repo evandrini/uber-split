@@ -4,7 +4,7 @@ import { formatCurrency } from '@/utils/rideCalculator'
 export const buildSharedRideMessage = (
   settlements: Settlement[],
   language: string,
-  shareUrl: string,
+  shareUrl?: string,
 ) => {
   const isPortuguese = language === 'pt-BR'
   const transferLines =
@@ -20,14 +20,27 @@ export const buildSharedRideMessage = (
             : 'No transfers are needed.',
         ]
 
-  return [
+  const message = [
     'UberSplit',
     '',
     ...transferLines,
     '',
-    isPortuguese
-      ? 'Confira os detalhes da divisão:'
-      : 'View the full breakdown:',
-    shareUrl,
-  ].join('\n')
+  ]
+
+  if (shareUrl) {
+    message.push(
+      isPortuguese
+        ? 'Veja o resultado completo:'
+        : 'View the full breakdown:',
+      shareUrl,
+    )
+  } else {
+    message.push(
+      isPortuguese
+        ? 'Resultado calculado com UberSplit.'
+        : 'Result calculated with UberSplit.',
+    )
+  }
+
+  return message.join('\n')
 }

@@ -24,6 +24,7 @@ import { hapticPulse } from '@/lib/haptics'
 import { toast } from 'sonner'
 import { decodeSharedRide } from '@/utils/sharedRide'
 import type { SharedTrip } from '@/utils/sharedRide'
+import { sharedRideStorage } from '@/utils/sharedRideStorage'
 import {
   fetchRouteGeometry,
   getStraightLineGeometry,
@@ -71,14 +72,34 @@ const Index = () => {
 
   useEffect(() => {
     const controller = new AbortController()
-    const encoded = new URLSearchParams(window.location.search).get('ride')
-    if (!encoded) return
+    const params = new URLSearchParams(window.location.search)
+    const shortId = params.get('s')
+    const encoded = params.get('ride')
+    if (!shortId && !encoded) return
 
-    const payload = decodeSharedRide(encoded)
-    if (!payload) {
-      toast.error(t('invalidSharedRide') as string)
-      return
-    }
+    const loadSharedRide = async () => {
+      const lookup = shortId
+        ? await sharedRideStorage.get(shortId)
+        : null
+      const payload = lookup
+        ? lookup.payload
+        : decodeSharedRide(encoded as string)
+      if (controller.signal.aborted) return
+
+      if (!payload) {
+        if (lookup) {
+          const messageKey =
+            lookup.status === 'expired'
+              ? 'expiredSharedRide'
+              : lookup.status === 'unavailable'
+                ? 'sharedRideUnavailable'
+                : 'invalidSharedRide'
+          toast.error(t(messageKey) as string)
+        } else {
+          toast.error(t('invalidSharedRide') as string)
+        }
+        return
+      }
 
     const restoreTrip = (sharedTrip: SharedTrip): TripData => {
       const stops = sharedTrip.stops.map((stop, index) => ({
@@ -206,6 +227,9 @@ const Index = () => {
         }
       })
 
+    }
+
+    loadSharedRide()
     return () => controller.abort()
   }, [])
 

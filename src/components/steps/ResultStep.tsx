@@ -1,13 +1,9 @@
 ﻿import { Button } from '@/components/ui/button'
 import {
-  ArrowDownLeft,
   ArrowLeft,
-  ArrowUpRight,
   Check,
   ChevronDown,
-  CircleDollarSign,
   Copy,
-  MapPin,
   Link,
   Route,
   Share2,
@@ -19,7 +15,7 @@ import { RouteMapErrorBoundary } from '@/components/RouteMapErrorBoundary'
 import { RouteSummaryMap } from '@/components/RouteSummaryMap'
 import type { Participant, Settlement, FullRideCalculation, RideCalculation, UberSplitDebugObject } from '@/types/ride'
 import { formatCurrency, generateWhatsAppText } from '@/utils/rideCalculator'
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { APP_URL, useLanguage } from '@/i18n/LanguageContext'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
@@ -28,6 +24,7 @@ import {
   createSharedRideUrl,
 } from '@/utils/sharedRide'
 import { buildSharedRideMessage } from '@/utils/shareMessage'
+import { getStopLabel as getStopLetter } from '@/utils/stopLabels'
 
 type SettlementSummaryRow = {
   participantId: string
@@ -35,13 +32,6 @@ type SettlementSummaryRow = {
   shouldPay: number
   paid: number
   balance: number
-}
-
-type RideIntensityRow = {
-  participantId: string
-  participantName: string
-  distance: number
-  percent: number
 }
 
 type TripDetailSection = {
@@ -72,6 +62,10 @@ export function ResultStep({
   const [selectedTrip, setSelectedTrip] = useState<'outbound' | 'return'>(
     fullCalculation.outbound ? 'outbound' : 'return',
   )
+  const [autoPlayTrip, setAutoPlayTrip] = useState<'outbound' | 'return' | null>(
+    fullCalculation.outbound ? 'outbound' : fullCalculation.return ? 'return' : null,
+  )
+  const transitionTimerRef = useRef<number>()
   const { t, language } = useLanguage()
   const shouldReduceMotion = useReducedMotion()
 
@@ -142,14 +136,6 @@ export function ResultStep({
       }
     : undefined
 
-  const outboundPayer = fullCalculation.outbound?.paidById
-    ? participants.find(participant => participant.id === fullCalculation.outbound?.paidById)
-    : null
-
-  const returnPayer = fullCalculation.return?.paidById
-    ? participants.find(participant => participant.id === fullCalculation.return?.paidById)
-    : null
-
   const hasAnyPayer = Boolean(fullCalculation.outbound?.paidById || fullCalculation.return?.paidById)
 
   const summaryMap = new Map<string, SettlementSummaryRow>()
@@ -187,37 +173,6 @@ export function ResultStep({
     }))
     .sort((a, b) => b.shouldPay - a.shouldPay)
 
-  const rideDistanceMap = new Map<string, number>()
-  participants.forEach(participant => rideDistanceMap.set(participant.id, 0))
-
-  const allLegs = [
-    ...(fullCalculation.outbound?.legs ?? []),
-    ...(fullCalculation.return?.legs ?? []),
-  ]
-
-  allLegs.forEach(leg => {
-    leg.passengers.forEach(passengerId => {
-      rideDistanceMap.set(
-        passengerId,
-        (rideDistanceMap.get(passengerId) ?? 0) + leg.distance
-      )
-    })
-  })
-
-  const maxDistance = Math.max(...Array.from(rideDistanceMap.values()), 0)
-
-  const rideIntensity: RideIntensityRow[] = participants
-    .map(participant => {
-      const distance = rideDistanceMap.get(participant.id) ?? 0
-      return {
-        participantId: participant.id,
-        participantName: participant.name,
-        distance,
-        percent: maxDistance > 0 ? (distance / maxDistance) * 100 : 0,
-      }
-    })
-    .sort((a, b) => b.distance - a.distance)
-
   const tripDetailSections: TripDetailSection[] = [
     fullCalculation.outbound && fullCalculation.outbound.totalCost > 0
       ? {
@@ -250,6 +205,34 @@ export function ResultStep({
       ? fullCalculation.outbound
       : fullCalculation.return
 
+  useEffect(
+    () => () => window.clearTimeout(transitionTimerRef.current),
+    [],
+  )
+
+  const handleAnimationComplete = useCallback(() => {
+    if (autoPlayTrip === 'outbound' && fullCalculation.return) {
+      window.clearTimeout(transitionTimerRef.current)
+      transitionTimerRef.current = window.setTimeout(() => {
+        setSelectedTrip('return')
+        setAutoPlayTrip('return')
+      }, 600)
+      return
+    }
+    setAutoPlayTrip(null)
+  }, [autoPlayTrip, fullCalculation.return])
+
+  const handleSkipAnimation = useCallback(() => {
+    window.clearTimeout(transitionTimerRef.current)
+    setAutoPlayTrip(null)
+  }, [])
+
+  const handleTripSelection = (trip: 'outbound' | 'return') => {
+    window.clearTimeout(transitionTimerRef.current)
+    setAutoPlayTrip(null)
+    setSelectedTrip(trip)
+  }
+
   return (
     <motion.div layout className="animate-fade-in space-y-5 sm:space-y-6">
       <div className="text-center">
@@ -272,7 +255,7 @@ export function ResultStep({
                 <button
                   key={id}
                   type="button"
-                  onClick={() => setSelectedTrip(id)}
+                  onClick={() => handleTripSelection(id)}
                   className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
                     selectedTrip === id
                       ? 'bg-teal-700 text-white shadow-sm'
@@ -305,73 +288,47 @@ export function ResultStep({
                 playLabel={t('playRoute') as string}
                 pauseLabel={t('pauseRoute') as string}
                 replayLabel={t('replayRoute') as string}
+                skipLabel={t('skipRoute') as string}
+                accumulatedLabel={t('accumulatedParticipation') as string}
+                nextLegLabel={t('nextLegCost') as string}
+                splitOneLabel={t('splitOnePerson') as string}
+                splitManyLabel={t('splitManyPeople') as string}
+                distanceTitle={t('distanceByPerson') as string}
+                distanceDescription={t('distanceByPersonAnimatedDescription') as string}
+                autoPlay={autoPlayTrip === selectedTrip}
+                onPlaybackComplete={handleAnimationComplete}
+                onSkip={handleSkipAnimation}
               />
             </RouteMapErrorBoundary>
           )}
         </motion.div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        <motion.div layout {...fadeUp()} className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4">
-          <div className="mb-1 flex items-center gap-2 text-muted-foreground">
-            <CircleDollarSign className="h-4 w-4" />
-            <span className="text-xs font-medium">{t('total') as string}</span>
-          </div>
-          <p className="text-base font-bold text-foreground sm:text-xl">
-            {formatCurrency(fullCalculation.totalCost, language)}
-          </p>
-        </motion.div>
-
-        <motion.div layout {...fadeUp(0.04)} className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4">
-          <div className="mb-1 flex items-center gap-2 text-muted-foreground">
-            <MapPin className="h-4 w-4" />
-            <span className="text-xs font-medium">{t('distance') as string}</span>
-          </div>
-          <p className="text-base font-bold text-foreground sm:text-xl">
-            {fullCalculation.totalDistance.toFixed(1)} km
-          </p>
-        </motion.div>
-      </div>
-
-      <div className="space-y-2">
-        {fullCalculation.outbound && fullCalculation.outbound.totalCost > 0 && (
-          <motion.div layout {...fadeUp(0.08)} className="rounded-xl border border-primary/15 bg-primary/5 p-3 sm:p-4">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2 font-semibold text-foreground">
-                <ArrowUpRight className="h-4 w-4 text-primary" />
-                {t('outbound') as string}
-              </div>
+      <motion.section
+        layout
+        {...fadeUp()}
+        className="rounded-2xl border border-primary/20 bg-card p-4 shadow-sm sm:p-5"
+      >
+        <p className="text-xs font-medium text-muted-foreground">
+          {t('rideTotal') as string}
+        </p>
+        <p className="mt-1 text-2xl font-bold text-foreground">
+          {formatCurrency(fullCalculation.totalCost, language)}
+        </p>
+        <div className="mt-4 space-y-2 border-t border-border/70 pt-3">
+          {sortedCosts.map(cost => (
+            <div
+              key={cost.participantId}
+              className="flex items-center justify-between gap-3 text-sm"
+            >
+              <span className="font-medium">{cost.participantName}</span>
               <span className="font-bold text-foreground">
-                {formatCurrency(fullCalculation.outbound.totalCost, language)}
+                {formatCurrency(cost.totalCost, language)}
               </span>
             </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {outboundPayer
-                ? `${t('whoPaid') as string}: ${outboundPayer.name}`
-                : `${t('whoPaid') as string}: -`}
-            </div>
-          </motion.div>
-        )}
-
-        {fullCalculation.return && fullCalculation.return.totalCost > 0 && (
-          <motion.div layout {...fadeUp(0.12)} className="rounded-xl border border-accent/20 bg-accent/5 p-3 sm:p-4">
-            <div className="flex items-center justify-between text-sm">
-              <div className="flex items-center gap-2 font-semibold text-foreground">
-                <ArrowDownLeft className="h-4 w-4 text-accent" />
-                {t('return') as string}
-              </div>
-              <span className="font-bold text-foreground">
-                {formatCurrency(fullCalculation.return.totalCost, language)}
-              </span>
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">
-              {returnPayer
-                ? `${t('whoPaid') as string}: ${returnPayer.name}`
-                : `${t('whoPaid') as string}: -`}
-            </div>
-          </motion.div>
-        )}
-      </div>
+          ))}
+        </div>
+      </motion.section>
 
       <motion.div layout {...fadeUp(0.16)} className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10 p-4 sm:p-5">
         <h3 className="mb-3 text-sm font-bold text-foreground sm:text-base">
@@ -404,33 +361,6 @@ export function ResultStep({
         ) : (
           <p className="text-sm text-muted-foreground">{t('noSettlementNeeded') as string}</p>
         )}
-      </motion.div>
-
-      <motion.div data-testid="distance-chart" layout {...fadeUp(0.18)} className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
-        <h3 className="mb-1 text-sm font-bold text-foreground sm:text-base">
-          {t('distanceByPerson') as string}
-        </h3>
-        <p className="mb-3 text-xs text-muted-foreground sm:text-sm">
-          {t('distanceByPersonDescription') as string}
-        </p>
-        <div className="space-y-2.5">
-          {rideIntensity.map(row => (
-            <motion.div layout key={row.participantId} className="space-y-1">
-              <div className="flex items-center justify-between text-xs sm:text-sm">
-                <span className="font-medium text-foreground">{row.participantName}</span>
-                <span className="text-muted-foreground">{row.distance.toFixed(1)} km</span>
-              </div>
-              <div className="h-2.5 w-full rounded-full bg-muted">
-                <motion.div
-                  className="h-2.5 rounded-full bg-gradient-to-r from-primary to-accent"
-                  initial={shouldReduceMotion ? false : { width: 0 }}
-                  animate={{ width: `${Math.max(row.percent, row.distance > 0 ? 8 : 0)}%` }}
-                  transition={springTransition}
-                />
-              </div>
-            </motion.div>
-          ))}
-        </div>
       </motion.div>
 
       <motion.div layout whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
@@ -498,7 +428,7 @@ export function ResultStep({
                         className="rounded-xl border border-border/60 bg-background/70 p-3"
                       >
                         <p className="text-xs font-bold text-teal-800">
-                          {String.fromCharCode(65 + index)} · {getStopLabel(stop)}
+                          {getStopLetter(index)} · {getStopLabel(stop)}
                         </p>
                         <p className="mt-1 text-[11px] text-muted-foreground">
                           {stop.address || stop.name || '-'}

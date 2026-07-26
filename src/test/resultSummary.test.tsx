@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitForElementToBeRemoved, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitForElementToBeRemoved } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { translations } from '@/i18n/translations'
 import { calculateCosts, calculateLegs, combineCalculations } from '@/utils/rideCalculator'
 import type { Participant, Stop } from '@/types/ride'
 
 vi.mock('@/components/RouteSummaryMap', () => ({
-  RouteSummaryMap: () => <div data-testid="route-map">map</div>,
+  RouteSummaryMap: () => (
+    <div data-testid="route-map">
+      map
+      <div data-testid="distance-chart">Distância percorrida por pessoa</div>
+    </div>
+  ),
 }))
 vi.mock('@/components/DebugPanel', () => ({ DebugPanel: () => null }))
 vi.mock('@/i18n/LanguageContext', () => ({
@@ -73,7 +78,7 @@ describe('result information hierarchy', () => {
     await waitForElementToBeRemoved(details)
   })
 
-  it('builds the distance chart from leg distances rather than ride cost', () => {
+  it('keeps the final total and participant costs evident', () => {
     render(
       <ResultStep
         fullCalculation={fullCalculation}
@@ -84,9 +89,10 @@ describe('result information hierarchy', () => {
       />,
     )
 
-    const chart = within(screen.getByTestId('distance-chart'))
-    expect(chart.getByText('15.0 km')).toBeInTheDocument()
-    expect(chart.getByText('10.0 km')).toBeInTheDocument()
+    expect(screen.getByText('Total da corrida')).toBeInTheDocument()
+    expect(screen.getByText(/R\$\s*30,00/)).toBeInTheDocument()
+    expect(screen.getByText(/R\$\s*20,00/)).toBeInTheDocument()
+    expect(screen.getByText(/R\$\s*10,00/)).toBeInTheDocument()
   })
 
   it('keeps the copy-link action compact and secondary', () => {
@@ -100,7 +106,7 @@ describe('result information hierarchy', () => {
       />,
     )
 
-    const button = screen.getByRole('button', { name: /copiar link da conta/i })
+    const button = screen.getByRole('button', { name: /copiar link do resultado/i })
     expect(button).toHaveClass('h-10', 'text-sm', 'sm:w-auto')
     expect(button).not.toHaveClass('gradient-primary')
   })

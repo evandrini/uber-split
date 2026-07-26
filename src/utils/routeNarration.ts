@@ -1,5 +1,5 @@
 import type { Language } from '@/i18n/translations'
-import type { Participant, Stop } from '@/types/ride'
+import type { Participant, RideCalculation, Stop } from '@/types/ride'
 
 export type StopEvents = {
   enteringNames: string[]
@@ -9,6 +9,25 @@ export type StopEvents = {
 export type NarrativeFrame = {
   position: [number, number]
   stopIndex?: number
+  completedLegCount: number
+}
+
+export type AccumulatedParticipation = {
+  participantId: string
+  participantName: string
+  amount: number
+}
+
+export type AnimatedStopSummary = {
+  stopIndex: number
+  label: string
+  enteringNames: string[]
+  exitingNames: string[]
+  nextLegCost?: number
+  nextLegPassengerCount?: number
+  nextLegCostPerPerson?: number
+  nextLegPassengerIds: string[]
+  accumulatedByParticipant: Record<string, number>
 }
 
 export const getStopEvents = (
@@ -37,18 +56,6 @@ export const formatStopEvent = (
   language: Language,
 ) => {
   const { enteringNames, exitingNames } = getStopEvents(stop, participants)
-  const isFinalStop = stopIndex === stopCount - 1
-
-  if (
-    isFinalStop &&
-    exitingNames.length > 0 &&
-    exitingNames.length === participants.length
-  ) {
-    if (language === 'pt-BR') return 'Todos saíram no destino'
-    if (language === 'es-ES') return 'Todos bajaron en el destino'
-    return 'Everyone exited at the destination'
-  }
-
   const messages: string[] = []
   if (enteringNames.length > 0) {
     const verb =
@@ -69,6 +76,74 @@ export const formatStopEvent = (
     messages.push(`${joinNames(exitingNames, language)} ${verb}`)
   }
   return messages.join(' · ')
+}
+
+export const getAccumulatedParticipationAtStop = (
+  trip: RideCalculation,
+  stopIndex: number,
+  participants: Participant[],
+): AccumulatedParticipation[] => {
+  if (stopIndex < 1 || stopIndex > trip.legs.length) return []
+
+  const exitingIds = new Set(trip.legs[stopIndex - 1].toStop.exiting)
+  return participants
+    .filter(participant => exitingIds.has(participant.id))
+    .map(participant => ({
+      participantId: participant.id,
+      participantName: participant.name,
+      amount: trip.legBreakdown
+        .slice(0, stopIndex)
+        .reduce(
+          (total, leg) =>
+            total +
+            (leg.passengerIds.includes(participant.id)
+              ? leg.costPerPassenger
+              : 0),
+          0,
+        ),
+    }))
+}
+
+export const buildAnimatedStopSummaries = (
+  trip: RideCalculation,
+  participants: Participant[],
+): AnimatedStopSummary[] => {
+  const stops =
+    trip.legs.length > 0
+      ? [trip.legs[0].fromStop, ...trip.legs.map(leg => leg.toStop)]
+      : []
+  const accumulatedByParticipant = Object.fromEntries(
+    participants.map(participant => [participant.id, 0]),
+  )
+
+  return stops.map((stop, stopIndex) => {
+    if (stopIndex > 0) {
+      const completedLeg = trip.legBreakdown[stopIndex - 1]
+      completedLeg?.passengerIds.forEach(participantId => {
+        accumulatedByParticipant[participantId] =
+          (accumulatedByParticipant[participantId] ?? 0) +
+          completedLeg.costPerPassenger
+      })
+    }
+
+    const nextLeg = trip.legBreakdown[stopIndex]
+    const { enteringNames, exitingNames } = getStopEvents(stop, participants)
+    return {
+      stopIndex,
+      label: stop.name || stop.address,
+      enteringNames,
+      exitingNames,
+      ...(nextLeg
+        ? {
+            nextLegCost: nextLeg.totalLegCost,
+            nextLegPassengerCount: nextLeg.sharedWith,
+            nextLegCostPerPerson: nextLeg.costPerPassenger,
+            nextLegPassengerIds: nextLeg.passengerIds,
+          }
+        : { nextLegPassengerIds: [] }),
+      accumulatedByParticipant: { ...accumulatedByParticipant },
+    }
+  })
 }
 
 const distanceSquared = (
@@ -124,7 +199,10 @@ export const buildNarrativeFrames = (
           end,
           start + Math.round((segmentLength * frame) / movementFrames),
         )
-        frames.push({ position: geometry[coordinateIndex] })
+        frames.push({
+          position: geometry[coordinateIndex],
+          completedLegCount: stopIndex - 1,
+        })
       }
     }
 
@@ -132,6 +210,7 @@ export const buildNarrativeFrames = (
       frames.push({
         position: geometry[waypointIndices[stopIndex]],
         stopIndex,
+        completedLegCount: stopIndex,
       })
     }
   })

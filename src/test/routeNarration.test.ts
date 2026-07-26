@@ -3,6 +3,7 @@ import type { Participant, Stop } from '@/types/ride'
 import {
   buildNarrativeFrames,
   formatStopEvent,
+  getAccumulatedParticipationAtStop,
   getStopEvents,
 } from '@/utils/routeNarration'
 
@@ -45,7 +46,25 @@ describe('route narration', () => {
     expect(formatStopEvent(stops[1], 1, stops.length, participants, 'en-US'))
       .toBe('Evandro entered')
     expect(formatStopEvent(stops[2], 2, stops.length, participants, 'pt-BR'))
-      .toBe('Todos saíram no destino')
+      .toBe('Bruno e Evandro saíram')
+  })
+
+  it('sums accumulated participation from the existing leg breakdown', () => {
+    const trip = {
+      legs: [
+        { fromStop: stops[0], toStop: stops[1] },
+        { fromStop: stops[1], toStop: stops[2] },
+      ],
+      legBreakdown: [
+        { passengerIds: ['bruno'], costPerPassenger: 12.5 },
+        { passengerIds: ['bruno', 'evandro'], costPerPassenger: 8.25 },
+      ],
+    } as never
+
+    expect(getAccumulatedParticipationAtStop(trip, 2, participants)).toEqual([
+      { participantId: 'bruno', participantName: 'Bruno', amount: 20.75 },
+      { participantId: 'evandro', participantName: 'Evandro', amount: 8.25 },
+    ])
   })
 
   it('uses stop highlights without intermediate car movement for reduced motion', () => {

@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import type { Language } from '@/i18n/translations'
 import type { RideCalculation } from '@/types/ride'
+import { getStopLabel } from '@/utils/stopLabels'
 
 interface RouteMapErrorBoundaryProps {
   children: ReactNode
@@ -11,8 +12,6 @@ interface RouteMapErrorBoundaryProps {
 interface RouteMapErrorBoundaryState {
   hasError: boolean
 }
-
-const pointName = (index: number) => String.fromCharCode(65 + index)
 
 export class RouteMapErrorBoundary extends Component<
   RouteMapErrorBoundaryProps,
@@ -59,10 +58,10 @@ export class RouteMapErrorBoundary extends Component<
                   </span>
                 )}
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-teal-700 text-xs font-bold text-white">
-                  {pointName(index)}
+                  {getStopLabel(index)}
                 </span>
                 <span className="max-w-32 truncate text-xs font-medium text-foreground">
-                  {stop.name || stop.address || pointName(index)}
+                  {stop.name || stop.address || getStopLabel(index)}
                 </span>
               </div>
             ))}

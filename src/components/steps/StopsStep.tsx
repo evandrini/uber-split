@@ -56,6 +56,7 @@ import {
 } from '@/utils/addressAutocomplete'
 import type { AddressSuggestion } from '@/utils/addressAutocomplete'
 import { fetchRouteSegment } from '@/utils/routeGeometry'
+import { getStopLabel } from '@/utils/stopLabels'
 
 const MIN_STOPS = 2
 
@@ -389,7 +390,7 @@ function TripStopsEditor({
                       </button>
 
                       <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                        {index + 1}
+                        {getStopLabel(index)}
                       </div>
 
                       <div className="relative min-w-0 flex-1">

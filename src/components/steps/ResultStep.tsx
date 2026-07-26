@@ -15,9 +15,11 @@ import {
   Wallet,
 } from 'lucide-react'
 import { DebugPanel } from '@/components/DebugPanel'
+import { RouteMapErrorBoundary } from '@/components/RouteMapErrorBoundary'
+import { RouteSummaryMap } from '@/components/RouteSummaryMap'
 import type { Participant, Settlement, FullRideCalculation, RideCalculation, UberSplitDebugObject } from '@/types/ride'
 import { formatCurrency, generateWhatsAppText } from '@/utils/rideCalculator'
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 import { APP_URL, useLanguage } from '@/i18n/LanguageContext'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
@@ -25,6 +27,7 @@ import {
   createSharedRidePayload,
   createSharedRideUrl,
 } from '@/utils/sharedRide'
+import { buildSharedRideMessage } from '@/utils/shareMessage'
 
 type SettlementSummaryRow = {
   participantId: string
@@ -47,12 +50,6 @@ type TripDetailSection = {
   accentClassName: string
   trip: RideCalculation
 }
-
-const RouteSummaryMap = lazy(() =>
-  import('@/components/RouteSummaryMap').then(module => ({
-    default: module.RouteSummaryMap,
-  })),
-)
 
 interface ResultStepProps {
   fullCalculation: FullRideCalculation
@@ -100,24 +97,8 @@ export function ResultStep({
     )
 
   const buildShareMessage = () => {
-    const transferText = settlements.length > 0
-      ? settlements
-          .map(settlement =>
-            `${settlement.fromName} ${t('mustPay') as string} ${formatCurrency(settlement.amount, language)} ${t('to') as string} ${settlement.toName}.`
-          )
-          .join('\n')
-      : t('noSettlementNeeded') as string
-
     try {
-      return [
-        'UberSplit',
-        '',
-        `${t('total') as string}: ${formatCurrency(fullCalculation.totalCost, language)}`,
-        transferText,
-        '',
-        t('fullCalculationLink') as string,
-        buildShareLink(),
-      ].join('\n')
+      return buildSharedRideMessage(settlements, language, buildShareLink())
     } catch {
       toast.error(t('linkUnavailable') as string)
       return generateWhatsAppText(fullCalculation, settlements, language)
@@ -304,7 +285,11 @@ export function ResultStep({
             </div>
           )}
           {selectedCalculation && (
-            <Suspense fallback={<div className="h-56 animate-pulse rounded-3xl bg-muted/70" />}>
+            <RouteMapErrorBoundary
+              key={selectedTrip}
+              language={language}
+              trip={selectedCalculation}
+            >
               <RouteSummaryMap
                 trip={selectedCalculation}
                 participants={participants}
@@ -321,7 +306,7 @@ export function ResultStep({
                 pauseLabel={t('pauseRoute') as string}
                 replayLabel={t('replayRoute') as string}
               />
-            </Suspense>
+            </RouteMapErrorBoundary>
           )}
         </motion.div>
       )}

@@ -6,6 +6,7 @@ import {
   createSharedRideUrl,
   decodeSharedRide,
   encodeSharedRide,
+  type SharedRidePayload,
 } from '@/utils/sharedRide'
 
 const participants: Participant[] = [
@@ -27,10 +28,38 @@ const trip = (cost = 30): RideCalculation => {
 const fullRide = (withReturn = false): FullRideCalculation =>
   combineCalculations(trip(), withReturn ? trip(20) : undefined, participants)
 
+const legacyPayload = (): SharedRidePayload => ({
+  v: 1,
+  language: 'pt-BR',
+  participants: [
+    { id: 'p0', name: 'Bruno' },
+    { id: 'p1', name: 'Evandro' },
+  ],
+  outbound: {
+    cost: 30,
+    paidById: 'p0',
+    stops: stops.map(stop => ({
+      name: stop.name,
+      address: stop.address,
+      lat: stop.lat,
+      lon: stop.lon,
+      entering: stop.entering.map(id => id === 'bruno' ? 'p0' : 'p1'),
+      exiting: stop.exiting.map(id => id === 'bruno' ? 'p0' : 'p1'),
+    })),
+    legs: [{ distance: 10 }, { distance: 10 }],
+  },
+})
+
 describe('shared ride links', () => {
   it('creates and decodes an outbound-only link', () => {
     const payload = createSharedRidePayload(fullRide(), participants, 'pt-BR', true)
-    expect(decodeSharedRide(encodeSharedRide(payload))).toEqual(payload)
+    const decoded = decodeSharedRide(encodeSharedRide(payload))
+    expect(decoded?.language).toBe('pt-BR')
+    expect(decoded?.participants).toEqual([
+      { id: 'a', name: 'Bruno' },
+      { id: 'b', name: 'Evandro' },
+    ])
+    expect(decoded?.outbound?.cost).toBe(30)
   })
 
   it('creates and decodes outbound and return trips separately', () => {
@@ -72,7 +101,7 @@ describe('shared ride links', () => {
     const payload = createSharedRidePayload(fullRide(), participants, 'pt-BR', false)
     const serialized = JSON.stringify(payload)
     expect(serialized).not.toContain('84')
-    expect(payload.outbound?.stops[0].address).toBe('Casa')
+    expect(decodeSharedRide(encodeSharedRide(payload))?.outbound?.stops[0].address).toBe('Casa')
   })
 
   it('keeps the GitHub Pages basename in the generated URL', () => {
@@ -90,8 +119,28 @@ describe('shared ride links', () => {
     const payload = createSharedRidePayload(ride, participants, 'pt-BR', true)
     const serialized = JSON.stringify(payload)
 
-    expect(payload.participants.map(participant => participant.id)).toEqual(['p0', 'p1'])
+    expect(payload.p.map(participant => participant[0])).toEqual(['a', 'b'])
     expect(serialized).not.toContain('routeGeometry')
     expect(serialized).not.toContain('debug')
+    expect(serialized).not.toContain('participantCosts')
+    expect(serialized).not.toContain('legBreakdown')
+    expect(serialized).not.toContain('"name"')
+    expect(serialized).not.toContain('"address"')
+    expect(serialized).not.toContain('"distance"')
+  })
+
+  it('decodes legacy verbose links after trying the compact format', () => {
+    expect(decodeSharedRide(encodeSharedRide(legacyPayload()))).toEqual(legacyPayload())
+  })
+
+  it('creates a shorter URL than the legacy verbose payload', () => {
+    const baseUrl = 'https://evandrini.github.io/uber-split/'
+    const compactUrl = createSharedRideUrl(
+      baseUrl,
+      createSharedRidePayload(fullRide(), participants, 'pt-BR', true),
+    )
+    const legacyUrl = createSharedRideUrl(baseUrl, legacyPayload())
+
+    expect(compactUrl.length).toBeLessThan(legacyUrl.length)
   })
 })

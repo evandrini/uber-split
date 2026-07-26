@@ -88,4 +88,20 @@ describe('result information hierarchy', () => {
     expect(chart.getByText('15.0 km')).toBeInTheDocument()
     expect(chart.getByText('10.0 km')).toBeInTheDocument()
   })
+
+  it('keeps the copy-link action compact and secondary', () => {
+    render(
+      <ResultStep
+        fullCalculation={fullCalculation}
+        participants={participants}
+        settlements={[]}
+        onBack={vi.fn()}
+        onReset={vi.fn()}
+      />,
+    )
+
+    const button = screen.getByRole('button', { name: /copiar link da conta/i })
+    expect(button).toHaveClass('h-10', 'text-sm', 'sm:w-auto')
+    expect(button).not.toHaveClass('gradient-primary')
+  })
 })

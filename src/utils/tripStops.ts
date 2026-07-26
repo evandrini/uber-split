@@ -23,6 +23,10 @@ export const clearStopAddress = (stop: Stop): Stop => ({
   name: '',
   lat: undefined,
   lon: undefined,
+  countryCode: undefined,
+  country: undefined,
+  state: undefined,
+  city: undefined,
 })
 
 export const rebuildLegs = (

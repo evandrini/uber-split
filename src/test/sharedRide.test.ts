@@ -81,4 +81,17 @@ describe('shared ride links', () => {
     expect(new URL(url).pathname).toBe('/uber-split/')
     expect(new URL(url).searchParams.get('ride')).toBeTruthy()
   })
+
+  it('uses short participant IDs and never serializes route geometry or debug data', () => {
+    const ride = fullRide()
+    if (ride.outbound) {
+      ride.outbound.routeGeometry = [[-19.9, -43.9], [-19.8, -43.8]]
+    }
+    const payload = createSharedRidePayload(ride, participants, 'pt-BR', true)
+    const serialized = JSON.stringify(payload)
+
+    expect(payload.participants.map(participant => participant.id)).toEqual(['p0', 'p1'])
+    expect(serialized).not.toContain('routeGeometry')
+    expect(serialized).not.toContain('debug')
+  })
 })

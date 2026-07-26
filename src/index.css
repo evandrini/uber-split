@@ -141,6 +141,24 @@
     box-shadow: 0 5px 16px rgb(15 118 110 / 0.24);
   }
 
+  .route-marker-active {
+    background: rgb(13 148 136);
+    color: white;
+    transform: scale(1.12);
+  }
+
+  .route-car {
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 2px solid white;
+    border-radius: 9999px;
+    background: rgb(15 118 110);
+    font-size: 17px;
+    box-shadow: 0 6px 18px rgb(15 23 42 / 0.28);
+  }
+
   .card-shadow {
     box-shadow: 0 4px 20px -4px hsl(var(--primary) / 0.08),
       0 2px 8px -2px hsl(var(--primary) / 0.04);

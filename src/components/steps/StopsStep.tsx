@@ -49,149 +49,19 @@ import {
   removeStopById,
   rebuildLegs,
 } from '@/utils/tripStops'
+import {
+  fetchAddressSuggestions,
+  formatAddressSuggestion,
+  geocodeBrazilianAddress,
+} from '@/utils/addressAutocomplete'
+import type { AddressSuggestion } from '@/utils/addressAutocomplete'
+import { fetchRouteSegment } from '@/utils/routeGeometry'
 
 const MIN_STOPS = 2
 
 type StopState = {
   availableEntering: string[]
   availableExiting: string[]
-}
-
-type AddressFields = {
-  road?: string
-  house_number?: string
-  pedestrian?: string
-  suburb?: string
-  neighbourhood?: string
-  city_district?: string
-  quarter?: string
-  city?: string
-  town?: string
-  village?: string
-  municipality?: string
-  state?: string
-  country?: string
-  amenity?: string
-  shop?: string
-  tourism?: string
-}
-
-type AddressSuggestion = {
-  display_name: string
-  lat: string
-  lon: string
-  name?: string
-  address?: AddressFields
-}
-
-type FormattedSuggestion = {
-  primary: string
-  secondary: string
-  finalValue: string
-}
-
-const formatAddress = (item: AddressSuggestion): FormattedSuggestion => {
-  const address = item.address ?? {}
-
-  const placeName = item.name || address.amenity || address.shop || address.tourism || ''
-  const streetBase = address.road || address.pedestrian || ''
-  const house = address.house_number || ''
-  const street = [streetBase, house].filter(Boolean).join(' ').trim()
-
-  const district =
-    address.neighbourhood || address.suburb || address.city_district || address.quarter || ''
-  const city = address.city || address.town || address.village || address.municipality || address.state || ''
-  const country = address.country || ''
-
-  const primary =
-    [placeName, street].filter(Boolean).join(' - ') ||
-    street ||
-    district ||
-    city ||
-    item.display_name
-  const secondary = [district, city, country].filter(Boolean).join(', ')
-
-  const finalValue = [placeName || street, district, city, country]
-    .filter(Boolean)
-    .join(', ') || item.display_name
-
-  return {
-    primary,
-    secondary,
-    finalValue,
-  }
-}
-const geocodeAddress = async (address: string) => {
-  if (!address.trim()) return null
-
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(address)}&limit=1`
-    )
-
-    if (!res.ok) return null
-
-    const data = (await res.json()) as AddressSuggestion[]
-    if (!data.length) return null
-
-    return {
-      lat: parseFloat(data[0].lat),
-      lon: parseFloat(data[0].lon),
-      normalizedAddress: formatAddress(data[0]).finalValue,
-    }
-  } catch {
-    return null
-  }
-}
-
-const fetchAddressSuggestions = async (query: string) => {
-  if (query.trim().length < 3) return []
-
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=${encodeURIComponent(query)}&limit=5`
-    )
-
-    if (!res.ok) return []
-
-    return (await res.json()) as AddressSuggestion[]
-  } catch {
-    return []
-  }
-}
-
-export const fetchRouteSegment = async (from?: Stop, to?: Stop) => {
-  if (!from?.lat || !from?.lon || !to?.lat || !to?.lon) {
-    return { distance: 0, geometry: [] as [number, number][] }
-  }
-
-  try {
-    const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson`
-    )
-
-    if (!res.ok) return { distance: 0, geometry: [] as [number, number][] }
-
-    const data = await res.json()
-    if (!data?.routes?.length) return { distance: 0, geometry: [] as [number, number][] }
-
-    const coordinates = Array.isArray(data.routes[0]?.geometry?.coordinates)
-      ? data.routes[0].geometry.coordinates
-          .filter((point: unknown) =>
-            Array.isArray(point) &&
-            point.length >= 2 &&
-            point.every(value => typeof value === 'number' && Number.isFinite(value))
-          )
-          .map(([lon, lat]: [number, number]) => [lat, lon] as [number, number])
-      : []
-
-    return {
-      distance: Number((data.routes[0].distance / 1000).toFixed(2)),
-      geometry: coordinates,
-    }
-  } catch {
-    return { distance: 0, geometry: [] as [number, number][] }
-  }
 }
 
 function FloatingCard({ label }: { label?: string }) {
@@ -287,13 +157,14 @@ function TripStopsEditor({
   participants: Participant[]
   onChange: (trip: TripData) => void
 }) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
 
   const [activeId, setActiveId] = useState<string | null>(null)
   const [activeStopId, setActiveStopId] = useState<string | null>(null)
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
 
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const autocompleteController = useRef<AbortController | null>(null)
   const distanceRequestVersion = useRef(0)
   const autocompleteRequestVersion = useRef(0)
 
@@ -302,6 +173,7 @@ function TripStopsEditor({
       if (typingTimeout.current) {
         clearTimeout(typingTimeout.current)
       }
+      autocompleteController.current?.abort()
     }
   }, [])
 
@@ -357,6 +229,7 @@ function TripStopsEditor({
       stops: sanitizedStops,
       legs: nextLegs,
       routeGeometry,
+      routeGeometryStatus: routeGeometry.length > 1 ? 'ready' : 'fallback',
     })
   }
 
@@ -367,6 +240,7 @@ function TripStopsEditor({
       stops: sanitizedStops,
       legs: rebuildLegs(sanitizedStops, trip.legs, true),
       routeGeometry: invalidateGeometry ? undefined : trip.routeGeometry,
+      routeGeometryStatus: invalidateGeometry ? undefined : trip.routeGeometryStatus,
     })
   }
 
@@ -401,6 +275,8 @@ function TripStopsEditor({
       clearTimeout(typingTimeout.current)
       typingTimeout.current = null
     }
+    autocompleteController.current?.abort()
+    autocompleteController.current = null
     autocompleteRequestVersion.current += 1
     distanceRequestVersion.current += 1
     if (activeStopId === stopId) {
@@ -424,6 +300,8 @@ function TripStopsEditor({
 
   const searchAddress = (query: string, stopId: string) => {
     const requestVersion = ++autocompleteRequestVersion.current
+    autocompleteController.current?.abort()
+    autocompleteController.current = null
     if (typingTimeout.current) {
       clearTimeout(typingTimeout.current)
     }
@@ -437,12 +315,29 @@ function TripStopsEditor({
     setActiveStopId(stopId)
 
     typingTimeout.current = setTimeout(async () => {
-      const result = await fetchAddressSuggestions(query)
-      if (
-        requestVersion !== autocompleteRequestVersion.current ||
-        !trip.stops.some(stop => stop.id === stopId)
-      ) return
-      setSuggestions(result)
+      const controller = new AbortController()
+      autocompleteController.current = controller
+
+      try {
+        const result = await fetchAddressSuggestions({
+          query,
+          language,
+          routeOrigin: trip.stops[0],
+          isOriginField: trip.stops[0]?.id === stopId,
+          signal: controller.signal,
+        })
+        if (
+          controller.signal.aborted ||
+          requestVersion !== autocompleteRequestVersion.current ||
+          !trip.stops.some(stop => stop.id === stopId)
+        ) return
+        setSuggestions(result)
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return
+        if (requestVersion === autocompleteRequestVersion.current) {
+          setSuggestions([])
+        }
+      }
     }, 300)
   }
 
@@ -524,7 +419,10 @@ function TripStopsEditor({
                             }
                           }}
                           onBlur={async event => {
-                            const geo = await geocodeAddress(event.target.value)
+                            const geo = await geocodeBrazilianAddress(
+                              event.target.value,
+                              language,
+                            )
                             if (!geo) return
 
                             const updatedStops = trip.stops.map(current =>
@@ -535,6 +433,10 @@ function TripStopsEditor({
                                     name: geo.normalizedAddress,
                                     lat: geo.lat,
                                     lon: geo.lon,
+                                    countryCode: geo.countryCode,
+                                    country: geo.country,
+                                    state: geo.state,
+                                    city: geo.city,
                                   }
                                 : current
                             )
@@ -546,7 +448,7 @@ function TripStopsEditor({
                         {activeStopId === stop.id && suggestions.length > 0 && (
                           <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-auto rounded-xl border border-border bg-popover shadow-xl">
                             {suggestions.map(item => {
-                              const formatted = formatAddress(item)
+                              const formatted = formatAddressSuggestion(item)
 
                               return (
                                 <button
@@ -563,13 +465,23 @@ function TripStopsEditor({
                                             address: formatted.finalValue,
                                             name: formatted.finalValue,
                                             lat: parseFloat(item.lat),
-                                            lon: parseFloat(item.lon)
+                                            lon: parseFloat(item.lon),
+                                            countryCode: item.address?.country_code?.toLowerCase(),
+                                            country: item.address?.country,
+                                            state: item.address?.state,
+                                            city:
+                                              item.address?.city ||
+                                              item.address?.town ||
+                                              item.address?.municipality ||
+                                              item.address?.village,
                                           }
                                         : current
                                     )
 
                                     setSuggestions([])
                                     setActiveStopId(null)
+                                    autocompleteController.current?.abort()
+                                    autocompleteController.current = null
                                     hapticPulse(8)
                                     updateTripWithDistances(updatedStops)
                                   }}

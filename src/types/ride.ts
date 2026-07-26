@@ -9,6 +9,10 @@ export interface Stop {
   address: string
   lat?: number
   lon?: number
+  countryCode?: string
+  country?: string
+  state?: string
+  city?: string
   entering: string[]
   exiting: string[]
 }
@@ -102,6 +106,7 @@ export interface RideCalculation {
   legs: Leg[];
   legBreakdown: LegBreakdown[];
   routeGeometry?: [number, number][];
+  routeGeometryStatus?: 'loading' | 'ready' | 'fallback';
   paidById?: string;
   debug?: TripDebugCalculation;
 }
@@ -112,6 +117,7 @@ export interface TripData {
   cost: string;
   paidBy: string;
   routeGeometry?: [number, number][];
+  routeGeometryStatus?: 'loading' | 'ready' | 'fallback';
 }
 
 export interface FullRideCalculation {

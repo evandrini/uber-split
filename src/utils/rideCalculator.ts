@@ -158,7 +158,8 @@ export function calculateCosts(
   legs: Leg[],
   participants: Participant[],
   paidById?: string,
-  routeGeometry?: [number, number][]
+  routeGeometry?: [number, number][],
+  routeGeometryStatus?: 'loading' | 'ready' | 'fallback'
 ): RideCalculation {
   const totalDistance = legs.reduce((sum, leg) => sum + leg.distance, 0);
   const participantCosts: Map<string, ParticipantCost> = new Map();
@@ -196,6 +197,7 @@ export function calculateCosts(
       legs,
       legBreakdown,
       routeGeometry,
+      routeGeometryStatus,
       paidById,
       debug,
     };
@@ -258,6 +260,7 @@ export function calculateCosts(
     legs,
     legBreakdown,
     routeGeometry,
+    routeGeometryStatus,
     paidById,
     debug,
   };

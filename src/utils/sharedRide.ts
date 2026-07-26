@@ -30,6 +30,7 @@ const withoutResidentialDetails = (value: string) =>
 const serializeTrip = (
   trip: RideCalculation,
   includeFullAddresses: boolean,
+  participantIdMap: Map<string, string>,
 ): SharedTrip => {
   const stops =
     trip.legs.length > 0
@@ -38,16 +39,20 @@ const serializeTrip = (
 
   return {
     cost: trip.totalCost,
-    paidById: trip.paidById,
+    paidById: trip.paidById ? participantIdMap.get(trip.paidById) : undefined,
     stops: stops.map(stop => ({
       name: includeFullAddresses ? stop.name : withoutResidentialDetails(stop.name),
       address: includeFullAddresses
         ? stop.address
         : withoutResidentialDetails(stop.name || stop.address),
-      lat: includeFullAddresses ? stop.lat : undefined,
-      lon: includeFullAddresses ? stop.lon : undefined,
-      entering: [...stop.entering],
-      exiting: [...stop.exiting],
+      lat: stop.lat,
+      lon: stop.lon,
+      entering: stop.entering
+        .map(id => participantIdMap.get(id))
+        .filter((id): id is string => Boolean(id)),
+      exiting: stop.exiting
+        .map(id => participantIdMap.get(id))
+        .filter((id): id is string => Boolean(id)),
     })),
     legs: trip.legs.map(leg => ({ distance: leg.distance })),
   }
@@ -58,17 +63,26 @@ export const createSharedRidePayload = (
   participants: Participant[],
   language: string,
   includeFullAddresses: boolean,
-): SharedRidePayload => ({
-  v: 1,
-  language: language === 'pt-BR' ? 'pt-BR' : 'en-US',
-  participants: participants.map(({ id, name }) => ({ id, name })),
-  outbound: fullCalculation.outbound
-    ? serializeTrip(fullCalculation.outbound, includeFullAddresses)
-    : undefined,
-  return: fullCalculation.return
-    ? serializeTrip(fullCalculation.return, includeFullAddresses)
-    : undefined,
-})
+): SharedRidePayload => {
+  const participantIdMap = new Map(
+    participants.map((participant, index) => [participant.id, `p${index}`]),
+  )
+
+  return {
+    v: 1,
+    language: language === 'pt-BR' ? 'pt-BR' : 'en-US',
+    participants: participants.map(({ id, name }) => ({
+      id: participantIdMap.get(id) as string,
+      name,
+    })),
+    outbound: fullCalculation.outbound
+      ? serializeTrip(fullCalculation.outbound, includeFullAddresses, participantIdMap)
+      : undefined,
+    return: fullCalculation.return
+      ? serializeTrip(fullCalculation.return, includeFullAddresses, participantIdMap)
+      : undefined,
+  }
+}
 
 export const encodeSharedRide = (payload: SharedRidePayload) =>
   compressToEncodedURIComponent(JSON.stringify(payload))

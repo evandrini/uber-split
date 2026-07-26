@@ -310,11 +310,16 @@ export function ResultStep({
                 participants={participants}
                 tripKey={selectedTrip}
                 fallbackLabel={t('mapFallback') as string}
+                loadingLabel={t('mapLoading') as string}
                 originLabel={t('origin') as string}
                 intermediateLabel={t('intermediateStop') as string}
                 destinationLabel={t('finalDestination') as string}
                 enteredLabel={t('enteredLabel') as string}
                 exitedLabel={t('exitedLabel') as string}
+                language={language}
+                playLabel={t('playRoute') as string}
+                pauseLabel={t('pauseRoute') as string}
+                replayLabel={t('replayRoute') as string}
               />
             </Suspense>
           )}
@@ -726,40 +731,35 @@ export function ResultStep({
             className="h-11 w-full gradient-primary text-sm sm:h-12 sm:text-base btn-slide"
           >
             <Share2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-            {t('shareResult') as string}
+            {t('shareWhatsApp') as string}
           </Button>
         </motion.div>
 
-        <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
-          <Button
-            variant="outline"
-            onClick={handleCopyLink}
-            className="h-11 w-full text-sm sm:h-12 sm:text-base btn-pop"
-          >
-            <Link className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-            {t('copyRideLink') as string}
-          </Button>
-        </motion.div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopy}
+              className="h-10 w-full gap-2 rounded-xl px-4 text-sm font-medium sm:w-auto btn-pop"
+            >
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              {copied ? (t('copied') as string) : (t('copyMessage') as string)}
+            </Button>
+          </motion.div>
 
-        <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
-          <Button
-            variant="outline"
-            onClick={handleCopy}
-            className="h-11 w-full text-sm sm:h-12 sm:text-base btn-pop"
-          >
-            {copied ? (
-              <>
-                <Check className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                {t('copied') as string}
-              </>
-            ) : (
-              <>
-                <Copy className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                {t('copyMessage') as string}
-              </>
-            )}
-          </Button>
-        </motion.div>
+          <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCopyLink}
+              className="h-10 w-full gap-2 rounded-xl border-white/70 bg-white/55 px-4 text-sm font-medium shadow-sm backdrop-blur sm:w-auto btn-pop"
+            >
+              <Link className="h-4 w-4" />
+              {t('copyRideLink') as string}
+            </Button>
+          </motion.div>
+        </div>
 
         <div className="flex gap-2 sm:gap-3">
           <motion.div className="flex-1" whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>

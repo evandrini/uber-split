@@ -24,6 +24,10 @@ import { hapticPulse } from '@/lib/haptics'
 import { toast } from 'sonner'
 import { decodeSharedRide } from '@/utils/sharedRide'
 import type { SharedTrip } from '@/utils/sharedRide'
+import {
+  fetchRouteGeometry,
+  getStraightLineGeometry,
+} from '@/utils/routeGeometry'
 
 const getStepAnimation = (step: number) => {
   if (step === 1) return { initial: { opacity: 0, y: 14 }, exit: { opacity: 0, y: -8 } }
@@ -66,6 +70,7 @@ const Index = () => {
   const progress = Math.round((currentStep / 4) * 100)
 
   useEffect(() => {
+    const controller = new AbortController()
     const encoded = new URLSearchParams(window.location.search).get('ride')
     if (!encoded) return
 
@@ -89,6 +94,7 @@ const Index = () => {
         legs,
         cost: String(sharedTrip.cost),
         paidBy: sharedTrip.paidById ?? '',
+        routeGeometryStatus: 'loading',
       }
     }
 
@@ -100,6 +106,8 @@ const Index = () => {
           restoredOutbound.legs,
           payload.participants,
           payload.outbound!.paidById,
+          undefined,
+          'loading',
         )
       : undefined
     const returnCalculation = restoredReturn
@@ -108,6 +116,8 @@ const Index = () => {
           restoredReturn.legs,
           payload.participants,
           payload.return!.paidById,
+          undefined,
+          'loading',
         )
       : undefined
 
@@ -127,6 +137,76 @@ const Index = () => {
       combineCalculations(outboundCalculation, returnCalculation, payload.participants),
     )
     setCurrentStep(4)
+
+    const restoreGeometry = async (
+      tripType: 'outbound' | 'return',
+      trip: TripData | undefined,
+    ) => {
+      if (!trip) return undefined
+      const requestedGeometry = true
+      const restoredGeometry = await fetchRouteGeometry(
+        trip.stops,
+        controller.signal,
+      )
+      const fallbackGeometry = getStraightLineGeometry(trip.stops)
+      const routeGeometry = restoredGeometry ?? fallbackGeometry
+      const fallbackUsed = !restoredGeometry
+
+      if (import.meta.env.DEV) {
+        console.debug('[Shared ride map]', {
+          tripType,
+          stopCount: trip.stops.length,
+          hasStoredGeometry: false,
+          requestedGeometry,
+          geometryCoordinateCount: routeGeometry.length,
+          fallbackUsed,
+        })
+      }
+
+      return {
+        routeGeometry,
+        routeGeometryStatus: fallbackUsed ? 'fallback' as const : 'ready' as const,
+      }
+    }
+
+    Promise.all([
+      restoreGeometry('outbound', restoredOutbound),
+      restoreGeometry('return', restoredReturn),
+    ])
+      .then(([outboundGeometry, returnGeometry]) => {
+        if (controller.signal.aborted) return
+
+        if (restoredOutbound && outboundGeometry) {
+          setOutboundTrip(current => ({ ...current, ...outboundGeometry }))
+        }
+        if (restoredReturn && returnGeometry) {
+          setReturnTrip(current => ({ ...current, ...returnGeometry }))
+        }
+
+        setFullCalculation(current => {
+          if (!current) return current
+          const nextOutbound =
+            current.outbound && outboundGeometry
+              ? { ...current.outbound, ...outboundGeometry }
+              : current.outbound
+          const nextReturn =
+            current.return && returnGeometry
+              ? { ...current.return, ...returnGeometry }
+              : current.return
+          return {
+            ...current,
+            outbound: nextOutbound,
+            return: nextReturn,
+          }
+        })
+      })
+      .catch(error => {
+        if (!controller.signal.aborted && import.meta.env.DEV) {
+          console.debug('[Shared ride map] geometry request failed', error)
+        }
+      })
+
+    return () => controller.abort()
   }, [])
 
   const goToStep = (step: number, pattern: number | number[] = 10) => {
@@ -164,6 +244,7 @@ const Index = () => {
       routeGeometry: outboundTrip.routeGeometry
         ? [...outboundTrip.routeGeometry].reverse()
         : undefined,
+      routeGeometryStatus: outboundTrip.routeGeometryStatus,
     }))
   }
 
@@ -256,6 +337,7 @@ const Index = () => {
         participants,
         outboundPaidBy,
         outboundTrip.routeGeometry,
+        outboundTrip.routeGeometryStatus,
       )
     }
 
@@ -266,6 +348,7 @@ const Index = () => {
         participants,
         returnPaidBy,
         returnTrip.routeGeometry,
+        returnTrip.routeGeometryStatus,
       )
     }
 

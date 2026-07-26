@@ -41,6 +41,14 @@ import type { DragEndEvent } from '@dnd-kit/core'
 import type { Participant, Stop, TripData } from '@/types/ride'
 import { useLanguage } from '@/i18n/LanguageContext'
 import { hapticPulse } from '@/lib/haptics'
+import { calculateLegs } from '@/utils/rideCalculator'
+import {
+  createIntermediateStop,
+  clearStopAddress,
+  insertStopBeforeDestination,
+  removeStopById,
+  rebuildLegs,
+} from '@/utils/tripStops'
 
 const MIN_STOPS = 2
 
@@ -152,22 +160,37 @@ const fetchAddressSuggestions = async (query: string) => {
   }
 }
 
-const calculateDistanceKm = async (from?: Stop, to?: Stop) => {
-  if (!from?.lat || !from?.lon || !to?.lat || !to?.lon) return 0
+export const fetchRouteSegment = async (from?: Stop, to?: Stop) => {
+  if (!from?.lat || !from?.lon || !to?.lat || !to?.lon) {
+    return { distance: 0, geometry: [] as [number, number][] }
+  }
 
   try {
     const res = await fetch(
-      `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`
+      `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=full&geometries=geojson`
     )
 
-    if (!res.ok) return 0
+    if (!res.ok) return { distance: 0, geometry: [] as [number, number][] }
 
     const data = await res.json()
-    if (!data?.routes?.length) return 0
+    if (!data?.routes?.length) return { distance: 0, geometry: [] as [number, number][] }
 
-    return Number((data.routes[0].distance / 1000).toFixed(2))
+    const coordinates = Array.isArray(data.routes[0]?.geometry?.coordinates)
+      ? data.routes[0].geometry.coordinates
+          .filter((point: unknown) =>
+            Array.isArray(point) &&
+            point.length >= 2 &&
+            point.every(value => typeof value === 'number' && Number.isFinite(value))
+          )
+          .map(([lon, lat]: [number, number]) => [lat, lon] as [number, number])
+      : []
+
+    return {
+      distance: Number((data.routes[0].distance / 1000).toFixed(2)),
+      geometry: coordinates,
+    }
   } catch {
-    return 0
+    return { distance: 0, geometry: [] as [number, number][] }
   }
 }
 
@@ -271,6 +294,8 @@ function TripStopsEditor({
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>([])
 
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const distanceRequestVersion = useRef(0)
+  const autocompleteRequestVersion = useRef(0)
 
   useEffect(() => {
     return () => {
@@ -308,32 +333,40 @@ function TripStopsEditor({
   }
 
   const updateTripWithDistances = async (updatedStops: Stop[]) => {
+    const requestVersion = ++distanceRequestVersion.current
     const sanitizedStops = sanitizeStops(updatedStops, participantIds)
 
-    const nextDistances = await Promise.all(
+    const routeSegments = await Promise.all(
       sanitizedStops
         .slice(0, -1)
-        .map((fromStop, index) => calculateDistanceKm(fromStop, sanitizedStops[index + 1]))
+        .map((fromStop, index) => fetchRouteSegment(fromStop, sanitizedStops[index + 1]))
     )
 
-    const nextLegs = sanitizedStops.slice(0, -1).map((fromStop, index) => ({
-      fromStop,
-      toStop: sanitizedStops[index + 1],
-      passengers: trip.legs[index]?.passengers ?? [],
-      distance: nextDistances[index] ?? 0
+    if (requestVersion !== distanceRequestVersion.current) return
+
+    const nextLegs = calculateLegs(sanitizedStops, participants).map((leg, index) => ({
+      ...leg,
+      distance: routeSegments[index]?.distance ?? 0
     }))
+    const routeGeometry = routeSegments.flatMap((segment, index) =>
+      index === 0 ? segment.geometry : segment.geometry.slice(1)
+    )
 
     onChange({
       ...trip,
       stops: sanitizedStops,
-      legs: nextLegs
+      legs: nextLegs,
+      routeGeometry,
     })
   }
 
-  const updateStopsOnly = (updatedStops: Stop[]) => {
+  const updateStopsOnly = (updatedStops: Stop[], invalidateGeometry = false) => {
+    const sanitizedStops = sanitizeStops(updatedStops, participantIds)
     onChange({
       ...trip,
-      stops: sanitizeStops(updatedStops, participantIds)
+      stops: sanitizedStops,
+      legs: rebuildLegs(sanitizedStops, trip.legs, true),
+      routeGeometry: invalidateGeometry ? undefined : trip.routeGeometry,
     })
   }
 
@@ -353,22 +386,30 @@ function TripStopsEditor({
   }
 
   const addStop = () => {
-    const nextStop: Stop = {
-      id: crypto.randomUUID(),
-      name: '',
-      address: '',
-      entering: [],
-      exiting: []
-    }
-
-    updateStopsOnly([...trip.stops, nextStop])
+    const updatedStops = insertStopBeforeDestination(
+      trip.stops,
+      createIntermediateStop(),
+    )
+    updateTripWithDistances(updatedStops)
     hapticPulse(10)
   }
 
   const removeStop = async (stopId: string) => {
     if (trip.stops.length <= MIN_STOPS) return
 
-    const updatedStops = trip.stops.filter(stop => stop.id !== stopId)
+    if (typingTimeout.current) {
+      clearTimeout(typingTimeout.current)
+      typingTimeout.current = null
+    }
+    autocompleteRequestVersion.current += 1
+    distanceRequestVersion.current += 1
+    if (activeStopId === stopId) {
+      setActiveStopId(null)
+      setSuggestions([])
+    }
+    if (activeId === stopId) setActiveId(null)
+
+    const updatedStops = removeStopById(trip.stops, stopId)
     hapticPulse(8)
     await updateTripWithDistances(updatedStops)
   }
@@ -378,10 +419,11 @@ function TripStopsEditor({
       stop.id === stopId ? updater(stop) : stop
     )
 
-    updateStopsOnly(updatedStops)
+    updateStopsOnly(updatedStops, true)
   }
 
   const searchAddress = (query: string, stopId: string) => {
+    const requestVersion = ++autocompleteRequestVersion.current
     if (typingTimeout.current) {
       clearTimeout(typingTimeout.current)
     }
@@ -396,6 +438,10 @@ function TripStopsEditor({
 
     typingTimeout.current = setTimeout(async () => {
       const result = await fetchAddressSuggestions(query)
+      if (
+        requestVersion !== autocompleteRequestVersion.current ||
+        !trip.stops.some(stop => stop.id === stopId)
+      ) return
       setSuggestions(result)
     }, 300)
   }
@@ -460,10 +506,22 @@ function TripStopsEditor({
 
                             updateStop(stop.id, current => ({
                               ...current,
-                              address: value
+                              address: value,
+                              name: value,
+                              ...(value.trim()
+                                ? {}
+                                : { lat: undefined, lon: undefined }),
                             }))
 
                             searchAddress(value, stop.id)
+                            if (!value.trim()) {
+                              const clearedStops = trip.stops.map(current =>
+                                current.id === stop.id
+                                  ? clearStopAddress(current)
+                                  : current
+                              )
+                              updateTripWithDistances(clearedStops)
+                            }
                           }}
                           onBlur={async event => {
                             const geo = await geocodeAddress(event.target.value)

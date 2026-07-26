@@ -21,6 +21,9 @@ import {
 import { Car, Sparkles } from 'lucide-react'
 import { useLanguage } from '@/i18n/LanguageContext'
 import { hapticPulse } from '@/lib/haptics'
+import { toast } from 'sonner'
+import { decodeSharedRide } from '@/utils/sharedRide'
+import type { SharedTrip } from '@/utils/sharedRide'
 
 const getStepAnimation = (step: number) => {
   if (step === 1) return { initial: { opacity: 0, y: 14 }, exit: { opacity: 0, y: -8 } }
@@ -30,7 +33,7 @@ const getStepAnimation = (step: number) => {
 }
 
 const Index = () => {
-  const { t } = useLanguage()
+  const { t, setLanguage } = useLanguage()
 
   const [currentStep, setCurrentStep] = useState(1)
   const [participants, setParticipants] = useState<Participant[]>([])
@@ -61,6 +64,70 @@ const Index = () => {
   const hasReturn = parseFloat(returnCost) > 0
 
   const progress = Math.round((currentStep / 4) * 100)
+
+  useEffect(() => {
+    const encoded = new URLSearchParams(window.location.search).get('ride')
+    if (!encoded) return
+
+    const payload = decodeSharedRide(encoded)
+    if (!payload) {
+      toast.error(t('invalidSharedRide') as string)
+      return
+    }
+
+    const restoreTrip = (sharedTrip: SharedTrip): TripData => {
+      const stops = sharedTrip.stops.map((stop, index) => ({
+        ...stop,
+        id: `shared-${index}-${crypto.randomUUID()}`,
+      }))
+      const legs = calculateLegs(stops, payload.participants).map((leg, index) => ({
+        ...leg,
+        distance: sharedTrip.legs[index]?.distance ?? 0,
+      }))
+      return {
+        stops,
+        legs,
+        cost: String(sharedTrip.cost),
+        paidBy: sharedTrip.paidById ?? '',
+      }
+    }
+
+    const restoredOutbound = payload.outbound ? restoreTrip(payload.outbound) : undefined
+    const restoredReturn = payload.return ? restoreTrip(payload.return) : undefined
+    const outboundCalculation = restoredOutbound
+      ? calculateCosts(
+          payload.outbound!.cost,
+          restoredOutbound.legs,
+          payload.participants,
+          payload.outbound!.paidById,
+        )
+      : undefined
+    const returnCalculation = restoredReturn
+      ? calculateCosts(
+          payload.return!.cost,
+          restoredReturn.legs,
+          payload.participants,
+          payload.return!.paidById,
+        )
+      : undefined
+
+    setLanguage(payload.language)
+    setParticipants(payload.participants)
+    if (restoredOutbound) {
+      setOutboundTrip(restoredOutbound)
+      setOutboundCost(String(payload.outbound!.cost))
+      setOutboundPaidBy(payload.outbound!.paidById ?? '')
+    }
+    if (restoredReturn) {
+      setReturnTrip(restoredReturn)
+      setReturnCost(String(payload.return!.cost))
+      setReturnPaidBy(payload.return!.paidById ?? '')
+    }
+    setFullCalculation(
+      combineCalculations(outboundCalculation, returnCalculation, payload.participants),
+    )
+    setCurrentStep(4)
+  }, [])
 
   const goToStep = (step: number, pattern: number | number[] = 10) => {
     hapticPulse(pattern)
@@ -94,6 +161,9 @@ const Index = () => {
       ...prev,
       stops: reversedStops,
       legs: reversedLegs,
+      routeGeometry: outboundTrip.routeGeometry
+        ? [...outboundTrip.routeGeometry].reverse()
+        : undefined,
     }))
   }
 
@@ -184,7 +254,8 @@ const Index = () => {
         parseFloat(outboundCost),
         outboundTrip.legs,
         participants,
-        outboundPaidBy
+        outboundPaidBy,
+        outboundTrip.routeGeometry,
       )
     }
 
@@ -193,7 +264,8 @@ const Index = () => {
         parseFloat(returnCost),
         returnTrip.legs,
         participants,
-        returnPaidBy
+        returnPaidBy,
+        returnTrip.routeGeometry,
       )
     }
 

@@ -33,6 +33,17 @@ export interface ParticipantCost {
   }[];
 }
 
+export interface LegBreakdown {
+  from: string;
+  to: string;
+  distance: number;
+  totalLegCost: number;
+  passengerIds: string[];
+  passengerNames: string[];
+  sharedWith: number;
+  costPerPassenger: number;
+}
+
 export interface DebugStop {
   index: number;
   stopId: string;
@@ -89,6 +100,8 @@ export interface RideCalculation {
   totalDistance: number;
   participantCosts: ParticipantCost[];
   legs: Leg[];
+  legBreakdown: LegBreakdown[];
+  routeGeometry?: [number, number][];
   paidById?: string;
   debug?: TripDebugCalculation;
 }
@@ -98,6 +111,7 @@ export interface TripData {
   legs: Leg[];
   cost: string;
   paidBy: string;
+  routeGeometry?: [number, number][];
 }
 
 export interface FullRideCalculation {

@@ -4,18 +4,27 @@ import {
   ArrowLeft,
   ArrowUpRight,
   Check,
+  ChevronDown,
   CircleDollarSign,
   Copy,
   MapPin,
+  Link,
+  Route,
   Share2,
+  Users,
   Wallet,
 } from 'lucide-react'
 import { DebugPanel } from '@/components/DebugPanel'
-import type { Participant, Settlement, FullRideCalculation, UberSplitDebugObject } from '@/types/ride'
+import type { Participant, Settlement, FullRideCalculation, RideCalculation, UberSplitDebugObject } from '@/types/ride'
 import { formatCurrency, generateWhatsAppText } from '@/utils/rideCalculator'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { toast } from 'sonner'
 import { APP_URL, useLanguage } from '@/i18n/LanguageContext'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import {
+  createSharedRidePayload,
+  createSharedRideUrl,
+} from '@/utils/sharedRide'
 
 type SettlementSummaryRow = {
   participantId: string
@@ -31,6 +40,19 @@ type RideIntensityRow = {
   distance: number
   percent: number
 }
+
+type TripDetailSection = {
+  id: 'outbound' | 'return'
+  title: string
+  accentClassName: string
+  trip: RideCalculation
+}
+
+const RouteSummaryMap = lazy(() =>
+  import('@/components/RouteSummaryMap').then(module => ({
+    default: module.RouteSummaryMap,
+  })),
+)
 
 interface ResultStepProps {
   fullCalculation: FullRideCalculation
@@ -49,19 +71,57 @@ export function ResultStep({
 }: ResultStepProps) {
   const [copied, setCopied] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [includeFullAddresses, setIncludeFullAddresses] = useState(false)
+  const [selectedTrip, setSelectedTrip] = useState<'outbound' | 'return'>(
+    fullCalculation.outbound ? 'outbound' : 'return',
+  )
   const { t, language } = useLanguage()
+  const shouldReduceMotion = useReducedMotion()
+
+  const springTransition = shouldReduceMotion
+    ? { duration: 0 }
+    : { type: 'spring' as const, stiffness: 260, damping: 28, mass: 0.7 }
+
+  const fadeUp = (delay = 0) => ({
+    initial: shouldReduceMotion ? false : { opacity: 0, y: 12, scale: 0.985 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    transition: { ...springTransition, delay },
+  })
+
+  const buildShareLink = () =>
+    createSharedRideUrl(
+      APP_URL,
+      createSharedRidePayload(
+        fullCalculation,
+        participants,
+        language,
+        includeFullAddresses,
+      ),
+    )
 
   const buildShareMessage = () => {
-    const baseText = generateWhatsAppText(fullCalculation, settlements, language)
+    const transferText = settlements.length > 0
+      ? settlements
+          .map(settlement =>
+            `${settlement.fromName} ${t('mustPay') as string} ${formatCurrency(settlement.amount, language)} ${t('to') as string} ${settlement.toName}.`
+          )
+          .join('\n')
+      : t('noSettlementNeeded') as string
 
-    const promoText =
-      language === 'pt-BR'
-        ? '\n\nFaça sua própria divisão aqui:\n'
-        : language === 'es-ES'
-          ? '\n\nHaz tu propia división aquí:\n'
-          : '\n\nSplit your ride here:\n'
-
-    return baseText + promoText + APP_URL
+    try {
+      return [
+        'UberSplit',
+        '',
+        `${t('total') as string}: ${formatCurrency(fullCalculation.totalCost, language)}`,
+        transferText,
+        '',
+        t('fullCalculationLink') as string,
+        buildShareLink(),
+      ].join('\n')
+    } catch {
+      toast.error(t('linkUnavailable') as string)
+      return generateWhatsAppText(fullCalculation, settlements, language)
+    }
   }
 
   const handleCopy = async () => {
@@ -79,6 +139,15 @@ export function ResultStep({
     const message = buildShareMessage()
     const encoded = encodeURIComponent(message)
     window.open(`https://wa.me/?text=${encoded}`, '_blank')
+  }
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(buildShareLink())
+      toast.success(t('linkCopied') as string)
+    } catch {
+      toast.error(t('linkUnavailable') as string)
+    }
   }
 
   const sortedCosts = [...fullCalculation.combinedCosts]
@@ -168,8 +237,40 @@ export function ResultStep({
     })
     .sort((a, b) => b.distance - a.distance)
 
+  const tripDetailSections: TripDetailSection[] = [
+    fullCalculation.outbound && fullCalculation.outbound.totalCost > 0
+      ? {
+          id: 'outbound' as const,
+          title: t('outbound') as string,
+          accentClassName: 'bg-primary text-primary-foreground',
+          trip: fullCalculation.outbound,
+        }
+      : null,
+    fullCalculation.return && fullCalculation.return.totalCost > 0
+      ? {
+          id: 'return' as const,
+          title: t('return') as string,
+          accentClassName: 'bg-accent text-accent-foreground',
+          trip: fullCalculation.return,
+        }
+      : null,
+  ].filter((section): section is TripDetailSection => Boolean(section))
+
+  const getPassengerNames = (passengerIds: string[]) =>
+    passengerIds
+      .map(passengerId => participants.find(participant => participant.id === passengerId)?.name)
+      .filter((name): name is string => Boolean(name))
+
+  const getStopLabel = (stop: { name?: string; address?: string }) =>
+    stop.name || stop.address || '-'
+
+  const selectedCalculation =
+    selectedTrip === 'outbound'
+      ? fullCalculation.outbound
+      : fullCalculation.return
+
   return (
-    <div className="animate-fade-in space-y-5 sm:space-y-6">
+    <motion.div layout className="animate-fade-in space-y-5 sm:space-y-6">
       <div className="text-center">
         <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl gradient-primary sm:mb-4 sm:h-16 sm:w-16 sm:rounded-2xl">
           <Check className="h-6 w-6 text-primary-foreground sm:h-8 sm:w-8" />
@@ -182,8 +283,46 @@ export function ResultStep({
         </p>
       </div>
 
+      {(fullCalculation.outbound || fullCalculation.return) && (
+        <motion.div layout {...fadeUp()} className="space-y-3">
+          {fullCalculation.outbound && fullCalculation.return && (
+            <div className="grid grid-cols-2 rounded-2xl border border-white/70 bg-white/55 p-1 backdrop-blur-xl">
+              {(['outbound', 'return'] as const).map(id => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setSelectedTrip(id)}
+                  className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
+                    selectedTrip === id
+                      ? 'bg-teal-700 text-white shadow-sm'
+                      : 'text-muted-foreground hover:bg-white/70'
+                  }`}
+                >
+                  {t(id === 'outbound' ? 'outbound' : 'return') as string}
+                </button>
+              ))}
+            </div>
+          )}
+          {selectedCalculation && (
+            <Suspense fallback={<div className="h-56 animate-pulse rounded-3xl bg-muted/70" />}>
+              <RouteSummaryMap
+                trip={selectedCalculation}
+                participants={participants}
+                tripKey={selectedTrip}
+                fallbackLabel={t('mapFallback') as string}
+                originLabel={t('origin') as string}
+                intermediateLabel={t('intermediateStop') as string}
+                destinationLabel={t('finalDestination') as string}
+                enteredLabel={t('enteredLabel') as string}
+                exitedLabel={t('exitedLabel') as string}
+              />
+            </Suspense>
+          )}
+        </motion.div>
+      )}
+
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
-        <div className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4">
+        <motion.div layout {...fadeUp()} className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4">
           <div className="mb-1 flex items-center gap-2 text-muted-foreground">
             <CircleDollarSign className="h-4 w-4" />
             <span className="text-xs font-medium">{t('total') as string}</span>
@@ -191,9 +330,9 @@ export function ResultStep({
           <p className="text-base font-bold text-foreground sm:text-xl">
             {formatCurrency(fullCalculation.totalCost, language)}
           </p>
-        </div>
+        </motion.div>
 
-        <div className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4">
+        <motion.div layout {...fadeUp(0.04)} className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4">
           <div className="mb-1 flex items-center gap-2 text-muted-foreground">
             <MapPin className="h-4 w-4" />
             <span className="text-xs font-medium">{t('distance') as string}</span>
@@ -201,12 +340,12 @@ export function ResultStep({
           <p className="text-base font-bold text-foreground sm:text-xl">
             {fullCalculation.totalDistance.toFixed(1)} km
           </p>
-        </div>
+        </motion.div>
       </div>
 
       <div className="space-y-2">
         {fullCalculation.outbound && fullCalculation.outbound.totalCost > 0 && (
-          <div className="rounded-xl border border-primary/15 bg-primary/5 p-3 sm:p-4">
+          <motion.div layout {...fadeUp(0.08)} className="rounded-xl border border-primary/15 bg-primary/5 p-3 sm:p-4">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2 font-semibold text-foreground">
                 <ArrowUpRight className="h-4 w-4 text-primary" />
@@ -221,11 +360,11 @@ export function ResultStep({
                 ? `${t('whoPaid') as string}: ${outboundPayer.name}`
                 : `${t('whoPaid') as string}: -`}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {fullCalculation.return && fullCalculation.return.totalCost > 0 && (
-          <div className="rounded-xl border border-accent/20 bg-accent/5 p-3 sm:p-4">
+          <motion.div layout {...fadeUp(0.12)} className="rounded-xl border border-accent/20 bg-accent/5 p-3 sm:p-4">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2 font-semibold text-foreground">
                 <ArrowDownLeft className="h-4 w-4 text-accent" />
@@ -240,11 +379,11 @@ export function ResultStep({
                 ? `${t('whoPaid') as string}: ${returnPayer.name}`
                 : `${t('whoPaid') as string}: -`}
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
 
-      <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10 p-4 sm:p-5">
+      <motion.div layout {...fadeUp(0.16)} className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10 p-4 sm:p-5">
         <h3 className="mb-3 text-sm font-bold text-foreground sm:text-base">
           {t('settlementExplainTitle') as string}
         </h3>
@@ -256,8 +395,10 @@ export function ResultStep({
         ) : settlements.length > 0 ? (
           <div className="space-y-2">
             {settlements.map((settlement, index) => (
-              <div
+              <motion.div
+                layout
                 key={`${settlement.fromId}-${settlement.toId}-${index}`}
+                {...fadeUp(index * 0.035)}
                 className="flex items-center justify-between rounded-lg border border-border/70 bg-card/85 p-3 text-sm"
               >
                 <span className="text-foreground">
@@ -267,48 +408,189 @@ export function ResultStep({
                 <span className="font-bold text-accent">
                   {formatCurrency(settlement.amount, language)}
                 </span>
-              </div>
+              </motion.div>
             ))}
           </div>
         ) : (
           <p className="text-sm text-muted-foreground">{t('noSettlementNeeded') as string}</p>
         )}
-      </div>
+      </motion.div>
 
-      <Button
-        variant="outline"
-        onClick={() => setShowDetails(prev => !prev)}
-        className="w-full h-10 sm:h-11 btn-pop"
-      >
-        {showDetails ? (t('showLess') as string) : (t('showMore') as string)}
-      </Button>
+      <motion.div data-testid="distance-chart" layout {...fadeUp(0.18)} className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
+        <h3 className="mb-1 text-sm font-bold text-foreground sm:text-base">
+          {t('distanceByPerson') as string}
+        </h3>
+        <p className="mb-3 text-xs text-muted-foreground sm:text-sm">
+          {t('distanceByPersonDescription') as string}
+        </p>
+        <div className="space-y-2.5">
+          {rideIntensity.map(row => (
+            <motion.div layout key={row.participantId} className="space-y-1">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
+                <span className="font-medium text-foreground">{row.participantName}</span>
+                <span className="text-muted-foreground">{row.distance.toFixed(1)} km</span>
+              </div>
+              <div className="h-2.5 w-full rounded-full bg-muted">
+                <motion.div
+                  className="h-2.5 rounded-full bg-gradient-to-r from-primary to-accent"
+                  initial={shouldReduceMotion ? false : { width: 0 }}
+                  animate={{ width: `${Math.max(row.percent, row.distance > 0 ? 8 : 0)}%` }}
+                  transition={springTransition}
+                />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
 
-      {showDetails && (
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
-            <h3 className="mb-1 text-sm font-bold text-foreground sm:text-base">
-              {t('rideIntensityTitle') as string}
-            </h3>
-            <p className="mb-3 text-xs text-muted-foreground sm:text-sm">
-              {t('rideIntensitySubtitle') as string}
-            </p>
+      <motion.div layout whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
+        <Button
+          variant="outline"
+          onClick={() => setShowDetails(prev => !prev)}
+          className="h-10 w-full sm:h-11 btn-pop"
+          aria-expanded={showDetails}
+        >
+          {showDetails ? (t('showLess') as string) : (t('showMore') as string)}
+          <motion.span
+            animate={{ rotate: showDetails ? 180 : 0 }}
+            transition={springTransition}
+            className="ml-1 inline-flex"
+          >
+            <ChevronDown className="h-4 w-4" />
+          </motion.span>
+        </Button>
+      </motion.div>
 
-            <div className="space-y-2.5">
-              {rideIntensity.map(row => (
-                <div key={row.participantId} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="font-medium text-foreground">{row.participantName}</span>
-                    <span className="text-muted-foreground">{row.distance.toFixed(1)} km</span>
+      <AnimatePresence initial={false}>
+        {showDetails && (
+        <motion.div
+          key="calculation-details"
+          data-testid="calculation-details"
+          layout
+          initial={shouldReduceMotion ? false : { opacity: 0, y: -8, scale: 0.99 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8, scale: 0.99 }}
+          transition={springTransition}
+          className="space-y-4 overflow-hidden"
+        >
+          <div className="space-y-3">
+            {tripDetailSections.map(section => {
+              return (
+                <motion.section
+                  layout
+                  key={section.id}
+                  className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${section.accentClassName}`}>
+                        <Route className="h-4 w-4" />
+                      </span>
+                      <h3 className="text-sm font-bold text-foreground sm:text-base">
+                        {section.title}
+                      </h3>
+                    </div>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {section.trip.legs.length}{' '}
+                      {section.trip.legs.length === 1
+                        ? (t('legs') as string)
+                        : (t('legsPlural') as string)}
+                    </span>
                   </div>
-                  <div className="h-2.5 w-full rounded-full bg-muted">
-                    <div
-                      className="h-2.5 rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
-                      style={{ width: `${Math.max(row.percent, row.distance > 0 ? 8 : 0)}%` }}
-                    />
+
+                  <div className="mb-4 space-y-2">
+                    {[
+                      section.trip.legs[0]?.fromStop,
+                      ...section.trip.legs.map(leg => leg.toStop),
+                    ].filter(Boolean).map((stop, index) => (
+                      <div
+                        key={`${section.id}-point-${stop.id}`}
+                        className="rounded-xl border border-border/60 bg-background/70 p-3"
+                      >
+                        <p className="text-xs font-bold text-teal-800">
+                          {String.fromCharCode(65 + index)} · {getStopLabel(stop)}
+                        </p>
+                        <p className="mt-1 text-[11px] text-muted-foreground">
+                          {stop.address || stop.name || '-'}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
+
+                  <div className="space-y-3">
+                    {section.trip.legs.map((leg, index) => {
+                      const breakdown = section.trip.legBreakdown[index]
+                      const passengerNames = breakdown?.passengerNames ?? getPassengerNames(leg.passengers)
+                      const legTotalCost = breakdown?.totalLegCost ?? 0
+                      const passengerCost = breakdown?.costPerPassenger ?? 0
+
+                      return (
+                        <motion.article
+                          layout
+                          key={`${section.id}-${leg.fromStop.id}-${leg.toStop.id}-${index}`}
+                          initial={shouldReduceMotion ? false : { opacity: 0, y: 10, scale: 0.99 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ ...springTransition, delay: index * 0.04 }}
+                          className="relative rounded-xl border border-border/70 bg-background/80 p-3 shadow-sm"
+                        >
+                          <div className="absolute bottom-3 left-6 top-12 w-px bg-border" aria-hidden="true" />
+                          <div className="relative flex gap-3">
+                            <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${section.accentClassName}`}>
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0 flex-1 space-y-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-foreground">
+                                  {getStopLabel(leg.fromStop)} {'->'} {getStopLabel(leg.toStop)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {leg.distance.toFixed(1)} km
+                                </p>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="rounded-lg bg-muted/55 p-2">
+                                  <div className="text-muted-foreground">
+                                    {t('total') as string}
+                                  </div>
+                                  <div className="font-semibold text-foreground">
+                                    {formatCurrency(legTotalCost, language)}
+                                  </div>
+                                </div>
+                                <div className="rounded-lg bg-muted/55 p-2">
+                                  <div className="text-muted-foreground">
+                                    {t('perPerson') as string}
+                                  </div>
+                                  <div className="font-semibold text-foreground">
+                                    {formatCurrency(passengerCost, language)}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="rounded-lg border border-border/60 bg-card/80 p-2">
+                                <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                                  <Users className="h-3.5 w-3.5" />
+                                  {leg.passengers.length}
+                                </div>
+                                <p className="text-xs font-medium text-foreground">
+                                  {passengerNames.length > 0 ? passengerNames.join(', ') : '-'}
+                                </p>
+                                {passengerNames.map(name => (
+                                  <p key={name} className="mt-1 text-[11px] text-teal-800">
+                                    {name} {t('paysLabel') as string}{' '}
+                                    {formatCurrency(passengerCost, language)}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.article>
+                      )
+                    })}
+                  </div>
+                </motion.section>
+              )
+            })}
           </div>
 
           <div className="space-y-2 sm:space-y-3">
@@ -320,10 +602,11 @@ export function ResultStep({
               const topLegs = cost.legDetails.slice(0, 3)
 
               return (
-                <article
+                <motion.article
+                  layout
                   key={cost.participantId}
-                  className="animate-slide-in rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4"
-                  style={{ animationDelay: `${index * 90}ms` }}
+                  {...fadeUp(index * 0.04)}
+                  className="rounded-xl border border-border/80 bg-card p-3 shadow-sm sm:p-4"
                 >
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <div>
@@ -356,20 +639,22 @@ export function ResultStep({
                       ))}
                     </div>
                   )}
-                </article>
+                </motion.article>
               )
             })}
           </div>
 
-          <div className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
+          <motion.div layout className="rounded-2xl border border-border/80 bg-card/85 p-4 backdrop-blur-sm sm:p-5">
             <h3 className="mb-3 text-sm font-bold text-foreground sm:text-base">
               {t('settlementSummaryTitle') as string}
             </h3>
 
             <div className="space-y-2">
               {settlementSummary.map(row => (
-                <div
+                <motion.div
+                  layout
                   key={row.participantId}
+                  {...fadeUp()}
                   className="rounded-xl border border-border/70 bg-background/80 p-3"
                 >
                   <div className="mb-2 text-sm font-semibold text-foreground">
@@ -400,63 +685,107 @@ export function ResultStep({
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+        )}
+      </AnimatePresence>
 
       <DebugPanel debug={debugObject} />
 
       <div className="space-y-2 sm:space-y-3">
-        <Button
-          onClick={handleShare}
-          className="h-11 w-full gradient-primary text-sm sm:h-12 sm:text-base btn-slide"
-        >
-          <Share2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-          {t('shareWhatsApp') as string}
-        </Button>
+        <div className="rounded-2xl border border-amber-200/70 bg-amber-50/70 p-3">
+          <p className="text-xs text-amber-900">{t('sharePrivacyNotice') as string}</p>
+          <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-white/70 p-1">
+            <button
+              type="button"
+              onClick={() => setIncludeFullAddresses(true)}
+              className={`rounded-lg px-2 py-2 text-[11px] font-semibold transition ${
+                includeFullAddresses ? 'bg-teal-700 text-white' : 'text-muted-foreground'
+              }`}
+            >
+              {t('shareFullAddresses') as string}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIncludeFullAddresses(false)}
+              className={`rounded-lg px-2 py-2 text-[11px] font-semibold transition ${
+                !includeFullAddresses ? 'bg-teal-700 text-white' : 'text-muted-foreground'
+              }`}
+            >
+              {t('hideAddressDetails') as string}
+            </button>
+          </div>
+        </div>
 
-        <Button
-          variant="outline"
-          onClick={handleCopy}
-          className="h-11 w-full text-sm sm:h-12 sm:text-base btn-pop"
-        >
-          {copied ? (
-            <>
-              <Check className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-              {t('copied') as string}
-            </>
-          ) : (
-            <>
-              <Copy className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-              {t('copyMessage') as string}
-            </>
-          )}
-        </Button>
+        <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
+          <Button
+            onClick={handleShare}
+            className="h-11 w-full gradient-primary text-sm sm:h-12 sm:text-base btn-slide"
+          >
+            <Share2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+            {t('shareResult') as string}
+          </Button>
+        </motion.div>
+
+        <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
+          <Button
+            variant="outline"
+            onClick={handleCopyLink}
+            className="h-11 w-full text-sm sm:h-12 sm:text-base btn-pop"
+          >
+            <Link className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+            {t('copyRideLink') as string}
+          </Button>
+        </motion.div>
+
+        <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
+          <Button
+            variant="outline"
+            onClick={handleCopy}
+            className="h-11 w-full text-sm sm:h-12 sm:text-base btn-pop"
+          >
+            {copied ? (
+              <>
+                <Check className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                {t('copied') as string}
+              </>
+            ) : (
+              <>
+                <Copy className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                {t('copyMessage') as string}
+              </>
+            )}
+          </Button>
+        </motion.div>
 
         <div className="flex gap-2 sm:gap-3">
-          <Button
-            variant="outline"
-            onClick={onBack}
-            className="h-10 flex-1 text-sm sm:h-12 sm:text-base btn-pop"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-            {t('edit') as string}
-          </Button>
+          <motion.div className="flex-1" whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
+            <Button
+              variant="outline"
+              onClick={onBack}
+              className="h-10 w-full text-sm sm:h-12 sm:text-base btn-pop"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              {t('edit') as string}
+            </Button>
+          </motion.div>
 
-          <Button
-            variant="outline"
-            onClick={onReset}
-            className="h-10 flex-1 text-sm sm:h-12 sm:text-base btn-pop"
-          >
-            <Wallet className="mr-2 h-4 w-4" />
-            {t('newRide') as string}
-          </Button>
+          <motion.div className="flex-1" whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}>
+            <Button
+              variant="outline"
+              onClick={onReset}
+              className="h-10 w-full text-sm sm:h-12 sm:text-base btn-pop"
+            >
+              <Wallet className="mr-2 h-4 w-4" />
+              {t('newRide') as string}
+            </Button>
+          </motion.div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }
 

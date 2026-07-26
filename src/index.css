@@ -106,7 +106,39 @@
   }
 
   .gradient-subtle {
-    @apply bg-gradient-to-b from-secondary/50 to-background;
+    background:
+      radial-gradient(circle at 12% 4%, hsl(184 75% 87% / 0.72), transparent 30rem),
+      radial-gradient(circle at 92% 22%, hsl(160 68% 86% / 0.62), transparent 28rem),
+      linear-gradient(180deg, hsl(199 80% 97%), hsl(var(--background)));
+  }
+
+  .glass-panel {
+    @apply border border-white/70 bg-white/65 backdrop-blur-xl;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.8),
+      0 18px 50px hsl(187 55% 24% / 0.11);
+  }
+
+  .route-grid {
+    background-image:
+      linear-gradient(rgb(14 116 144 / 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(14 116 144 / 0.07) 1px, transparent 1px);
+    background-size: 28px 28px;
+    mask-image: linear-gradient(to bottom, black, transparent 92%);
+  }
+
+  .route-marker {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    place-items: center;
+    border: 2px solid rgb(15 118 110);
+    border-radius: 9999px;
+    background: white;
+    color: rgb(15 23 42);
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 5px 16px rgb(15 118 110 / 0.24);
   }
 
   .card-shadow {
@@ -176,6 +208,15 @@
   }
   50% {
     box-shadow: 0 0 0 6px hsl(var(--accent) / 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

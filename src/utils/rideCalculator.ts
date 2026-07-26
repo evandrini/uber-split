@@ -1,6 +1,6 @@
 ﻿import type { Participant, Stop, Leg, ParticipantCost, RideCalculation, Settlement, FullRideCalculation } from '@/types/ride'
 import type { Language } from '@/i18n/translations'
-import type { TripDebugCalculation } from '@/types/ride'
+import type { TripDebugCalculation, LegBreakdown } from '@/types/ride'
 import { translations } from '@/i18n/translations'
 import { getLocaleConfig } from '@/i18n/localeConfig'
 
@@ -157,10 +157,13 @@ export function calculateCosts(
   totalCost: number,
   legs: Leg[],
   participants: Participant[],
-  paidById?: string
+  paidById?: string,
+  routeGeometry?: [number, number][]
 ): RideCalculation {
   const totalDistance = legs.reduce((sum, leg) => sum + leg.distance, 0);
   const participantCosts: Map<string, ParticipantCost> = new Map();
+  const participantById = new Map(participants.map(participant => [participant.id, participant]));
+  const legBreakdown: LegBreakdown[] = [];
 
   // Initialize participant costs
   participants.forEach(p => {
@@ -191,6 +194,8 @@ export function calculateCosts(
       totalDistance: 0,
       participantCosts: participantCostsList,
       legs,
+      legBreakdown,
+      routeGeometry,
       paidById,
       debug,
     };
@@ -202,10 +207,22 @@ export function calculateCosts(
   legs.forEach(leg => {
     const legCost = leg.distance * costPerKm;
     const passengerCount = leg.passengers.length;
+    const costPerPerson = passengerCount > 0 ? legCost / passengerCount : 0;
+
+    legBreakdown.push({
+      from: getStopLabel(leg.fromStop),
+      to: getStopLabel(leg.toStop),
+      distance: leg.distance,
+      totalLegCost: legCost,
+      passengerIds: [...leg.passengers],
+      passengerNames: leg.passengers.map(
+        passengerId => participantById.get(passengerId)?.name || passengerId
+      ),
+      sharedWith: passengerCount,
+      costPerPassenger: costPerPerson,
+    });
 
     if (passengerCount > 0) {
-      const costPerPerson = legCost / passengerCount;
-
       leg.passengers.forEach(passengerId => {
         const participantCost = participantCosts.get(passengerId);
         if (participantCost) {
@@ -239,6 +256,8 @@ export function calculateCosts(
     totalDistance,
     participantCosts: participantCostsList,
     legs,
+    legBreakdown,
+    routeGeometry,
     paidById,
     debug,
   };

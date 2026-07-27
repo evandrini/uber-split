@@ -48,17 +48,17 @@ export function WelcomeScreen({ onStart }: { onStart: () => void }) {
   const comparisonStage = reduceMotion ? 7 : stage
 
   return (
-    <section data-testid="welcome-screen" className="relative isolate overflow-hidden rounded-[2rem] border border-white/40 bg-card/65 px-5 py-7 shadow-[0_30px_90px_hsl(var(--primary)/0.16)] backdrop-blur-2xl sm:px-9 sm:py-10">
+    <section data-testid="welcome-screen" className="relative isolate w-full min-w-0 max-w-full overflow-hidden rounded-[2rem] border border-white/40 bg-card/65 px-5 py-7 shadow-[0_30px_90px_hsl(var(--primary)/0.16)] backdrop-blur-2xl sm:px-9 sm:py-10">
       <div className="pointer-events-none absolute -left-24 top-8 h-52 w-52 rounded-full bg-primary/20 blur-3xl" />
       <div className="pointer-events-none absolute -right-20 bottom-4 h-56 w-56 rounded-full bg-orange-400/15 blur-3xl" />
 
-      <div className="relative grid items-start gap-7 lg:grid-cols-[0.88fr_1.12fr] lg:gap-10">
-        <div className="text-center lg:pt-3 lg:text-left">
+      <div className="relative grid w-full min-w-0 max-w-full items-start gap-7 lg:grid-cols-[minmax(0,0.88fr)_minmax(0,1.12fr)] lg:gap-10">
+        <div className="min-w-0 max-w-full text-center lg:pt-3 lg:text-left">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
             <Car className="h-3.5 w-3.5" />
             {t('landingEyebrow') as string}
           </div>
-          <h2 className="text-balance text-3xl font-black tracking-tight text-foreground sm:text-4xl">
+          <h2 className="max-w-full text-balance text-3xl font-black tracking-tight text-foreground sm:text-4xl">
             {t('landingTitle') as string}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-base font-medium leading-relaxed text-foreground/80 lg:mx-0">
@@ -81,12 +81,12 @@ export function WelcomeScreen({ onStart }: { onStart: () => void }) {
           </Button>
         </div>
 
-        <div className="relative mx-auto w-full max-w-xl">
+        <div className="relative mx-auto w-full min-w-0 max-w-xl">
           <p className="sr-only">{scenario.accessibilityDescription}</p>
-          <div aria-hidden="true" className="relative overflow-hidden rounded-[1.75rem] border border-white/50 bg-slate-950/95 p-4 shadow-2xl dark:border-white/10">
-            <div className="mb-3 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
-              <span>{scenario.routePreview}</span>
-              <span data-testid="demo-status" className="truncate rounded-full bg-sky-400/15 px-2 py-1 normal-case tracking-normal text-sky-200">{status}</span>
+          <div data-testid="demo-card" aria-hidden="true" className="relative w-full min-w-0 max-w-full overflow-hidden rounded-[1.75rem] border border-white/50 bg-slate-950/95 p-4 shadow-2xl dark:border-white/10">
+            <div data-testid="demo-status-area" className="mb-3 flex h-6 w-full min-w-0 max-w-full items-center gap-2 overflow-hidden text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">
+              <span className="shrink-0">{scenario.routePreview}</span>
+              <span data-testid="demo-status" className="block min-w-0 flex-1 truncate rounded-full bg-sky-400/15 px-2 py-1 text-right normal-case tracking-normal text-sky-200">{status}</span>
             </div>
 
             <div className="relative h-48 overflow-hidden rounded-2xl bg-[radial-gradient(circle_at_25%_25%,rgba(59,130,246,.22),transparent_32%),radial-gradient(circle_at_80%_75%,rgba(251,146,60,.18),transparent_34%),linear-gradient(135deg,#111827,#172033)] sm:h-52">
@@ -146,20 +146,20 @@ export function WelcomeScreen({ onStart }: { onStart: () => void }) {
               ))}
             </div>
 
-            <div className="mt-3 min-h-[126px]">
+            <div data-testid="demo-comparison" className="mt-3 h-[126px] min-w-0 overflow-hidden">
               <AnimatePresence mode="wait">
                 {comparisonStage <= 4 ? (
-                  <motion.div key="journey" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center text-xs text-white/70">
-                    <span className="font-semibold text-white">{status}</span>
+                  <motion.div key="journey" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex h-full min-w-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 text-center text-xs text-white/70">
+                    <span className="block min-w-0 max-w-full truncate font-semibold text-white">{status}</span>
                   </motion.div>
                 ) : comparisonStage <= 6 ? (
-                  <motion.div key="equal" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-2xl border border-orange-400/25 bg-orange-400/10 p-3">
+                  <motion.div key="equal" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="h-full min-w-0 overflow-hidden rounded-2xl border border-orange-400/25 bg-orange-400/10 p-3">
                     <div className="flex items-center gap-2 text-xs font-bold text-orange-200"><AlertTriangle className="h-4 w-4" />{scenario.equalTitle}</div>
                     <p className="mt-2 text-center text-sm font-bold text-white">{scenario.formatCurrency(80)} ÷ 4 = {scenario.formatCurrency(20)} {scenario.equalEach}</p>
                     <p className="mt-1 text-center text-[10px] text-orange-100/70">{scenario.equalWarning}</p>
                   </motion.div>
                 ) : (
-                  <motion.div key="fair" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-3">
+                  <motion.div key="fair" initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="h-full min-w-0 overflow-hidden rounded-2xl border border-emerald-400/25 bg-emerald-400/10 p-3">
                     <div className="flex items-center gap-2 text-xs font-bold text-emerald-200"><CheckCircle2 className="h-4 w-4" />{scenario.fairTitle}</div>
                     <p className="mt-2 flex justify-between gap-2 text-[10px] text-white/75">
                       <span>{scenario.payerShare} {scenario.payerName}</span>

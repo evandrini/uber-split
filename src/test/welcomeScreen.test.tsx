@@ -56,9 +56,13 @@ describe('welcome demonstration', () => {
   it('keeps responsive and theme-aware layout classes', () => {
     const { container } = render(<WelcomeScreen onStart={vi.fn()} />)
     const section = screen.getByTestId('welcome-screen')
-    expect(section).toHaveClass('px-5', 'sm:px-9', 'bg-card/65')
-    expect(container.querySelector('.lg\\:grid-cols-\\[0\\.88fr_1\\.12fr\\]')).toBeInTheDocument()
+    expect(section).toHaveClass('w-full', 'min-w-0', 'max-w-full', 'overflow-hidden', 'px-5', 'sm:px-9', 'bg-card/65')
+    expect(container.querySelector('.lg\\:grid-cols-\\[minmax\\(0\\,0\\.88fr\\)_minmax\\(0\\,1\\.12fr\\)\\]')).toBeInTheDocument()
     expect(container.querySelector('.h-48.sm\\:h-52')).toBeInTheDocument()
+    expect(screen.getByTestId('demo-card')).toHaveClass('w-full', 'min-w-0', 'max-w-full', 'overflow-hidden')
+    expect(screen.getByTestId('demo-status-area')).toHaveClass('h-6', 'w-full', 'min-w-0', 'overflow-hidden')
+    expect(screen.getByTestId('demo-status')).toHaveClass('min-w-0', 'flex-1', 'truncate')
+    expect(screen.getByTestId('demo-comparison')).toHaveClass('h-[126px]', 'min-w-0', 'overflow-hidden')
 
     document.documentElement.classList.add('dark')
     expect(container.querySelector('.dark\\:border-white\\/10')).toBeInTheDocument()

@@ -449,7 +449,7 @@ const Index = () => {
   const stepAnimation = getStepAnimation(currentStep)
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-background gradient-subtle">
+    <div className="relative min-h-screen min-w-0 max-w-full overflow-x-clip bg-background gradient-subtle">
       <div className="orb-float pointer-events-none absolute -left-24 top-28 h-52 w-52 rounded-full bg-primary/10 blur-3xl" />
       <div className="orb-float-delay pointer-events-none absolute -right-20 top-64 h-56 w-56 rounded-full bg-accent/10 blur-3xl" />
 
@@ -479,8 +479,8 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="container py-6 pb-20">
-        <div className={showIntro ? 'mx-auto max-w-5xl' : 'mx-auto max-w-md'}>
+      <main className="container min-w-0 max-w-full py-6 pb-20">
+        <div className={showIntro ? 'mx-auto min-w-0 max-w-5xl' : 'mx-auto min-w-0 max-w-md'}>
           {showIntro ? (
             <WelcomeScreen onStart={handleStart} />
           ) : (

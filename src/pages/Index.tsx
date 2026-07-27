@@ -7,6 +7,7 @@ import { ParticipantsStep } from '@/components/steps/ParticipantsStep'
 import { StopsStep } from '@/components/steps/StopsStep'
 import { ResultStep } from '@/components/steps/ResultStep'
 import { LanguageSelector } from '@/components/LanguageSelector'
+import { WelcomeScreen } from '@/components/WelcomeScreen'
 import type {
   Participant,
   TripData,
@@ -42,6 +43,10 @@ const Index = () => {
   const { t, setLanguage } = useLanguage()
 
   const [currentStep, setCurrentStep] = useState(1)
+  const [showIntro, setShowIntro] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return !params.has('s') && !params.has('ride')
+  })
   const [participants, setParticipants] = useState<Participant[]>([])
 
   const [outboundCost, setOutboundCost] = useState('')
@@ -164,6 +169,7 @@ const Index = () => {
     setFullCalculation(
       combineCalculations(outboundCalculation, returnCalculation, payload.participants),
     )
+    setShowIntro(false)
     setCurrentStep(4)
 
     const restoreGeometry = async (
@@ -429,7 +435,14 @@ const Index = () => {
     homeUrl.search = ''
     homeUrl.hash = ''
     window.history.replaceState(window.history.state, '', homeUrl.toString())
+    setShowIntro(true)
     window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
+  const handleStart = () => {
+    hapticPulse(12)
+    setShowIntro(false)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const steps = t('steps') as readonly string[]
@@ -467,7 +480,11 @@ const Index = () => {
       </header>
 
       <main className="container py-6 pb-20">
-        <div className="mx-auto max-w-md">
+        <div className={showIntro ? 'mx-auto max-w-5xl' : 'mx-auto max-w-md'}>
+          {showIntro ? (
+            <WelcomeScreen onStart={handleStart} />
+          ) : (
+          <>
           <div className="mb-4 rounded-2xl border border-primary/20 bg-card/90 p-4 shadow-[0_12px_30px_hsl(var(--primary)/0.09)] backdrop-blur-xl">
             <div className="flex gap-3">
               <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -575,6 +592,8 @@ const Index = () => {
           <p className="mt-6 text-center text-xs text-muted-foreground">
             {t('tagline') as string}
           </p>
+          </>
+          )}
         </div>
       </main>
       <footer className="border-t border-border/50 bg-background/50 px-4 py-4 text-center text-xs text-muted-foreground">

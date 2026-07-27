@@ -13,6 +13,11 @@ describe('translations', () => {
       'copyLongLink',
       'madeBy',
       'goHome',
+      'landingTitle',
+      'landingSubtitle',
+      'landingStart',
+      'landingProblemText',
+      'landingSolutionText',
     ] as const
 
     for (const language of ['pt-BR', 'en-US', 'es-ES', 'zh-CN'] as const) {

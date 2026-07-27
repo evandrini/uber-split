@@ -17,7 +17,7 @@ export const APP_URL = 'https://evandrini.github.io/uber-split/'
 function normalizeLanguage(value: string | null | undefined): Language | null {
   if (!value) return null
 
-  if (value === 'pt-BR' || value === 'en-US' || value === 'es-ES') {
+  if (value === 'pt-BR' || value === 'en-US' || value === 'es-ES' || value === 'zh-CN') {
     return value
   }
 
@@ -26,6 +26,7 @@ function normalizeLanguage(value: string | null | undefined): Language | null {
   if (lower.startsWith('pt')) return 'pt-BR'
   if (lower.startsWith('en')) return 'en-US'
   if (lower.startsWith('es')) return 'es-ES'
+  if (lower.startsWith('zh')) return 'zh-CN'
 
   return null
 }

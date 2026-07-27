@@ -2,7 +2,7 @@
 
 type LocaleConfig = {
   locale: string
-  currency: 'BRL' | 'USD' | 'EUR'
+  currency: 'BRL' | 'USD' | 'EUR' | 'CNY'
   currencySymbol: string
   decimalExample: string
   ogLocale: string
@@ -29,6 +29,13 @@ const localeConfigByLanguage: Record<Language, LocaleConfig> = {
     currencySymbol: '€',
     decimalExample: '0,00',
     ogLocale: 'es_ES',
+  },
+  'zh-CN': {
+    locale: 'zh-CN',
+    currency: 'CNY',
+    currencySymbol: '¥',
+    decimalExample: '0.00',
+    ogLocale: 'zh_CN',
   },
 }
 

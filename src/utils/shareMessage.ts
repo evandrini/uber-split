@@ -1,44 +1,58 @@
+import type { Language } from '@/i18n/translations'
 import type { Settlement } from '@/types/ride'
 import { formatCurrency } from '@/utils/rideCalculator'
 
 export const buildSharedRideMessage = (
   settlements: Settlement[],
-  language: string,
+  language: Language,
   shareUrl?: string,
 ) => {
-  const isPortuguese = language === 'pt-BR'
   const transferLines =
     settlements.length > 0
-      ? settlements.map(settlement =>
-          isPortuguese
-            ? `${settlement.fromName} deve pagar ${formatCurrency(settlement.amount, language)} para ${settlement.toName}.`
-            : `${settlement.fromName} should pay ${formatCurrency(settlement.amount, language)} to ${settlement.toName}.`,
-        )
+      ? settlements.map(settlement => {
+          const amount = formatCurrency(settlement.amount, language)
+          if (language === 'pt-BR') return `${settlement.fromName} deve pagar ${amount} para ${settlement.toName}.`
+          if (language === 'es-ES') return `${settlement.fromName} debe pagar ${amount} a ${settlement.toName}.`
+          if (language === 'zh-CN') return `${settlement.fromName} 应向 ${settlement.toName} 支付 ${amount}。`
+          return `${settlement.fromName} should pay ${settlement.toName} ${amount}.`
+        })
       : [
-          isPortuguese
+          language === 'pt-BR'
             ? 'Nenhuma transferência é necessária.'
-            : 'No transfers are needed.',
+            : language === 'es-ES'
+              ? 'No es necesaria ninguna transferencia.'
+              : language === 'zh-CN'
+                ? '无需转账。'
+                : 'No transfers are needed.',
         ]
 
   const message = [
-    'UberSplit',
+    '🚗 UberSplit',
     '',
-    ...transferLines,
+    ...transferLines.map((line, index) => `${index === 0 ? '💸 ' : '   '}${line}`),
     '',
   ]
 
   if (shareUrl) {
     message.push(
-      isPortuguese
-        ? 'Veja o resultado completo:'
-        : 'View the full breakdown:',
+      language === 'pt-BR'
+        ? '👀 Veja como a divisão foi calculada:'
+        : language === 'es-ES'
+          ? '👀 Mira cómo se dividió el viaje:'
+          : language === 'zh-CN'
+            ? '👀 查看车费是如何分摊的：'
+            : '👀 See how the fare was split:',
       shareUrl,
     )
   } else {
     message.push(
-      isPortuguese
+      language === 'pt-BR'
         ? 'Resultado calculado com UberSplit.'
-        : 'Result calculated with UberSplit.',
+        : language === 'es-ES'
+          ? 'Resultado calculado con UberSplit.'
+          : language === 'zh-CN'
+            ? '结果由 UberSplit 计算。'
+            : 'Result calculated with UberSplit.',
     )
   }
 

@@ -1,62 +1,54 @@
 import { describe, expect, it } from 'vitest'
+import type { Language } from '@/i18n/translations'
 import type { Settlement } from '@/types/ride'
 import { buildSharedRideMessage } from '@/utils/shareMessage'
 
-const url = 'https://evandrini.github.io/uber-split/?ride=compact'
+const url = 'https://evandrini.github.io/uber-split/?s=TNaj3Ta1'
 const settlements: Settlement[] = [
   {
-    fromId: 'evandro',
-    fromName: 'Evandro',
-    toId: 'bruno',
-    toName: 'Bruno',
-    amount: 21.64,
+    fromId: 'vinicius',
+    fromName: 'Vinicius',
+    toId: 'evandro',
+    toName: 'Evandro',
+    amount: 19.97,
   },
 ]
 
 describe('shared ride message', () => {
-  it('formats the Portuguese message with the URL on the last line', () => {
-    expect(buildSharedRideMessage(settlements, 'pt-BR', url)).toBe(
+  it.each([
+    ['pt-BR', 'Vinicius deve pagar R$ 19,97 para Evandro.', 'Veja como a divisão foi calculada'],
+    ['en-US', 'Vinicius should pay Evandro $19.97.', 'See how the fare was split'],
+    ['es-ES', 'Vinicius debe pagar 19,97 € a Evandro.', 'Mira cómo se dividió el viaje'],
+    ['zh-CN', 'Vinicius 应向 Evandro 支付 ¥19.97。', '查看车费是如何分摊的'],
+  ] satisfies Array<[Language, string, string]>)(
+    'formats the complete %s message with the short URL',
+    (language, transfer, curiosity) => {
+      const message = buildSharedRideMessage(settlements, language, url)
+      expect(message).toContain('🚗 UberSplit')
+      expect(message).toContain(`💸 ${transfer}`)
+      expect(message).toContain(`👀 ${curiosity}`)
+      expect(message.endsWith(url)).toBe(true)
+    },
+  )
+
+  it('lists every transfer on its own line', () => {
+    const message = buildSharedRideMessage(
       [
-        'UberSplit',
-        '',
-        'Evandro deve pagar R$ 21,64 para Bruno.',
-        '',
-        'Veja o resultado completo:',
-        url,
-      ].join('\n'),
+        ...settlements,
+        { fromId: 'ana', fromName: 'Ana', toId: 'evandro', toName: 'Evandro', amount: 10 },
+      ],
+      'pt-BR',
+      url,
     )
+
+    expect(message).toContain('💸 Vinicius deve pagar')
+    expect(message).toContain('\n   Ana deve pagar')
   })
 
-  it('shares only the summary when a short URL is unavailable', () => {
+  it('keeps the fallback summary free of long URLs', () => {
     const message = buildSharedRideMessage(settlements, 'pt-BR')
-
     expect(message).toContain('Resultado calculado com UberSplit.')
     expect(message).not.toContain('http')
     expect(message).not.toContain('?ride=')
-  })
-
-  it('formats the English message and lists multiple transfers separately', () => {
-    const extraSettlement: Settlement = {
-      fromId: 'ana',
-      fromName: 'Ana',
-      toId: 'bruno',
-      toName: 'Bruno',
-      amount: 10,
-    }
-    const message = buildSharedRideMessage(
-      [...settlements, extraSettlement],
-      'en-US',
-      url,
-    )
-
-    expect(message.split('\n')).toEqual([
-      'UberSplit',
-      '',
-      'Evandro should pay $21.64 to Bruno.',
-      'Ana should pay $10.00 to Bruno.',
-      '',
-      'View the full breakdown:',
-      url,
-    ])
   })
 })

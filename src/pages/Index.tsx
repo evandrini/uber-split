@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from 'react'
+import type { MouseEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { StepIndicator } from '@/components/StepIndicator'
 import { TotalCostStep } from '@/components/steps/TotalCostStep'
@@ -69,6 +70,12 @@ const Index = () => {
   const hasReturn = parseFloat(returnCost) > 0
 
   const progress = Math.round((currentStep / 4) * 100)
+
+  useEffect(() => {
+    if (currentStep === 4) {
+      window.scrollTo({ top: 0, behavior: 'auto' })
+    }
+  }, [currentStep])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -415,6 +422,16 @@ const Index = () => {
     }
   }
 
+  const handleGoHome = (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault()
+    handleReset()
+    const homeUrl = new URL(window.location.href)
+    homeUrl.search = ''
+    homeUrl.hash = ''
+    window.history.replaceState(window.history.state, '', homeUrl.toString())
+    window.scrollTo({ top: 0, behavior: 'auto' })
+  }
+
   const steps = t('steps') as readonly string[]
   const stepAnimation = getStepAnimation(currentStep)
 
@@ -426,7 +443,12 @@ const Index = () => {
       <header className="sticky top-0 z-10 border-b border-border/70 bg-background/80 backdrop-blur-lg">
         <div className="container py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <a
+              href={import.meta.env.BASE_URL}
+              onClick={handleGoHome}
+              aria-label={t('goHome') as string}
+              className="group flex cursor-pointer items-center gap-3 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
               <motion.div
                 animate={{ y: [0, -2, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
@@ -435,10 +457,10 @@ const Index = () => {
                 <Car className="h-5 w-5 text-primary-foreground" />
               </motion.div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight">{t('appName') as string}</h1>
+                <h1 className="text-xl font-bold tracking-tight group-hover:text-primary">{t('appName') as string}</h1>
                 <p className="text-[11px] text-muted-foreground">{t('smartAssistantLabel') as string}</p>
               </div>
-            </div>
+            </a>
             <LanguageSelector />
           </div>
         </div>
@@ -555,6 +577,17 @@ const Index = () => {
           </p>
         </div>
       </main>
+      <footer className="border-t border-border/50 bg-background/50 px-4 py-4 text-center text-xs text-muted-foreground">
+        <span>{t('madeBy') as string} </span>
+        <a
+          href="https://astronex.com.br"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-8 items-center rounded px-1 font-medium text-foreground underline-offset-4 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          Astronex
+        </a>
+      </footer>
     </div>
   )
 }

@@ -278,7 +278,7 @@ export function RouteSummaryMap({
         exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
         className="glass-panel overflow-hidden rounded-3xl p-3 sm:p-4"
       >
-        <div className="relative h-[280px] overflow-hidden rounded-2xl border border-white/70 sm:h-80">
+        <div className="relative h-[36vh] min-h-[300px] max-h-[420px] overflow-hidden rounded-3xl border border-border/70 shadow-[0_16px_40px_rgba(15,23,42,0.14)]">
           <MapContainer
             center={center}
             zoom={13}

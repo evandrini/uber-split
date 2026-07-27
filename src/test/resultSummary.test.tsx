@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+﻿// @vitest-environment jsdom
 import '@testing-library/jest-dom/vitest'
 import { cleanup, fireEvent, render, screen, waitFor, waitForElementToBeRemoved } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -22,7 +22,7 @@ vi.mock('@/components/RouteSummaryMap', () => ({
   RouteSummaryMap: () => (
     <div data-testid="route-map">
       map
-      <div data-testid="distance-chart">Distância percorrida por pessoa</div>
+      <div data-testid="distance-chart">DistÃ¢ncia percorrida por pessoa</div>
     </div>
   ),
 }))
@@ -41,7 +41,6 @@ afterEach(() => {
   cleanup()
   vi.clearAllMocks()
 })
-
 const participants: Participant[] = [
   { id: 'bruno', name: 'Bruno' },
   { id: 'evandro', name: 'Evandro' },
@@ -71,7 +70,7 @@ describe('result information hierarchy', () => {
     )
 
     expect(await screen.findByTestId('route-map')).toBeInTheDocument()
-    expect(screen.getByText('Distância percorrida por pessoa')).toBeInTheDocument()
+    expect(screen.getByText('DistÃ¢ncia percorrida por pessoa')).toBeInTheDocument()
     expect(screen.queryByTestId('calculation-details')).not.toBeInTheDocument()
   })
 
@@ -86,14 +85,14 @@ describe('result information hierarchy', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /ver detalhes do cálculo/i }))
+    fireEvent.click(screen.getByRole('button', { name: /como o cálculo foi feito/i }))
     expect(screen.getByTestId('calculation-details')).toBeInTheDocument()
     const details = screen.getByTestId('calculation-details')
     fireEvent.click(screen.getByRole('button', { name: /ver menos/i }))
     await waitForElementToBeRemoved(details)
   })
 
-  it('keeps the final total and participant costs evident', () => {
+  it('presents the ride as a receipt before the detailed calculation', () => {
     render(
       <ResultStep
         fullCalculation={fullCalculation}
@@ -106,11 +105,13 @@ describe('result information hierarchy', () => {
 
     expect(screen.getByText('Total da corrida')).toBeInTheDocument()
     expect(screen.getByText(/R\$\s*30,00/)).toBeInTheDocument()
-    expect(screen.getByText(/R\$\s*20,00/)).toBeInTheDocument()
-    expect(screen.getByText(/R\$\s*10,00/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Resumo da corrida' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Timeline da corrida' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Divisão calculada automaticamente' })).toBeInTheDocument()
+    expect(screen.getByText('Divisão proporcional ao percurso de cada passageiro.')).toBeInTheDocument()
   })
 
-  it('keeps the copy-link action compact and secondary', () => {
+  it('shows only copy-message and WhatsApp sharing controls', () => {
     render(
       <ResultStep
         fullCalculation={fullCalculation}
@@ -121,14 +122,21 @@ describe('result information hierarchy', () => {
       />,
     )
 
-    const button = screen.getByRole('button', { name: /copiar link do resultado/i })
-    expect(button).toHaveClass('h-10', 'text-sm', 'sm:w-auto')
-    expect(button).not.toHaveClass('gradient-primary')
+    expect(screen.getByRole('button', { name: /copiar mensagem/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /compartilhar no whatsapp/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /copiar link do resultado/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^compartilhar resultado$/i })).not.toBeInTheDocument()
   })
 
-  it('creates a short link only after sharing and never includes ride payload', async () => {
+  it('copies and shares the same complete short-link message while reusing one ID', async () => {
     storageMock.create.mockResolvedValue('K8mP2xQz')
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    })
     const open = vi.spyOn(window, 'open').mockImplementation(() => null)
+    window.history.replaceState({}, '', '/uber-split/?ride=legacy')
     render(
       <ResultStep
         fullCalculation={fullCalculation}
@@ -140,23 +148,28 @@ describe('result information hierarchy', () => {
     )
 
     expect(storageMock.create).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: /compartilhar resultado/i }))
+    fireEvent.click(screen.getByRole('button', { name: /copiar mensagem/i }))
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
+    expect(writeText.mock.calls[0][0]).toContain('?s=K8mP2xQz')
+    expect(window.location.pathname).toBe('/uber-split/')
+    expect(window.location.search).toBe('?s=K8mP2xQz')
+
+    fireEvent.click(screen.getByRole('button', { name: /compartilhar no whatsapp/i }))
 
     await waitFor(() =>
       expect(
-        open.mock.calls.some(call => String(call[0]).includes('wa.me')),
+        open.mock.calls.some(call => String(call[0]).includes('whatsapp.com')),
       ).toBe(true),
     )
     expect(storageMock.create).toHaveBeenCalledTimes(1)
     const whatsappUrl = String(
-      open.mock.calls.find(call => String(call[0]).includes('wa.me'))?.[0],
+      open.mock.calls.find(call => String(call[0]).includes('whatsapp.com'))?.[0],
     )
     const message = decodeURIComponent(whatsappUrl.split('text=')[1])
     expect(message).toContain('?s=K8mP2xQz')
+    expect(message).toBe(writeText.mock.calls[0][0])
     expect(message).not.toContain('?ride=')
-
-    fireEvent.click(screen.getByRole('button', { name: /compartilhar resultado/i }))
-    await waitFor(() => expect(open).toHaveBeenCalledTimes(4))
     expect(storageMock.create).toHaveBeenCalledTimes(1)
   })
 
@@ -173,15 +186,15 @@ describe('result information hierarchy', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /compartilhar resultado/i }))
+    fireEvent.click(screen.getByRole('button', { name: /compartilhar no whatsapp/i }))
     await waitFor(() =>
       expect(
-        open.mock.calls.some(call => String(call[0]).includes('wa.me')),
+        open.mock.calls.some(call => String(call[0]).includes('whatsapp.com')),
       ).toBe(true),
     )
 
     const whatsappUrl = String(
-      open.mock.calls.find(call => String(call[0]).includes('wa.me'))?.[0],
+      open.mock.calls.find(call => String(call[0]).includes('whatsapp.com'))?.[0],
     )
     const message = decodeURIComponent(whatsappUrl.split('text=')[1])
     expect(message).toContain('Resultado calculado com UberSplit.')

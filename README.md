@@ -1,97 +1,198 @@
-﻿# UberSplit
+# UberSplit
 
-Aplicativo web para dividir corridas de Uber de forma justa quando existem multiplas paradas.
+**A transparent and shareable way to split multi-stop rides based on the distance each passenger actually traveled.**
 
-App online: https://evandrini.github.io/uber-split/
+UberSplit is designed for the moment after a ride ends. It turns a multi-stop fare into a receipt-style breakdown that passengers can review and share.
 
-## O problema que ele resolve
-Quando um grupo divide a corrida por igual, quase sempre alguem paga a mais.
-Exemplo: quem desce antes nao deveria pagar pela parte final da viagem.
+- [Live demo](https://evandrini.github.io/uber-split/)
+- [Repository](https://github.com/evandrini/uber-split)
 
-O UberSplit calcula automaticamente quanto cada pessoa deve pagar com base no trecho que realmente percorreu.
+## Preview
 
-## Para quem serve
-- Grupos de amigos
-- Casais com amigos/familia
-- Corridas com ida e volta
-- Situacoes em que pessoas entram e saem em pontos diferentes
+The live application includes an interactive, privacy-safe demonstration using fictional passengers and an abstract route. Open the [live demo](https://evandrini.github.io/uber-split/) to try it.
 
-## Como usar (bem simples)
-1. Adicione os participantes.
-2. Informe valor da ida e/ou volta.
-3. Selecione quem pagou cada corrida (obrigatorio para calcular transferencias finais).
-4. Monte as paradas e marque quem entra/sai em cada ponto.
-5. Clique em calcular.
+## The problem
 
-## Simulacao rapida
-Cenario:
-- Corrida total: R$ 60,00
-- Trecho A -> B: 6 km (Ana e Bruno no carro)
-- Trecho B -> C: 3 km (apenas Bruno no carro)
+Splitting a ride equally works only when everyone travels the same route.
 
-Passo 1: custo por km
-- Distancia total = 9 km
-- R$ 60,00 / 9 = R$ 6,67 por km
+In a multi-stop ride, someone who joins near the destination should not pay the same amount as someone who traveled from the beginning. Equal is not always fair when passengers travel different distances.
 
-Passo 2: custo de cada trecho
-- A -> B: 6 km x 6,67 = R$ 40,02
-- B -> C: 3 km x 6,67 = R$ 20,01
+## How UberSplit solves it
 
-Passo 3: divisao por quem estava no carro
-- A -> B (2 pessoas): R$ 40,02 / 2 = R$ 20,01 para cada
-- B -> C (1 pessoa): R$ 20,01 para Bruno
+UberSplit divides the route into segments and assigns each segment only to the passengers who were inside the vehicle at that time. Segment cost follows segment distance, so the final result reflects how much of the ride each person actually traveled.
 
-Resultado final:
-- Ana: R$ 20,01
-- Bruno: R$ 40,02
+After considering who paid for the ride, UberSplit also determines the reimbursements needed to settle the group. The receipt can then be copied or shared through a short verification link so everyone can inspect the breakdown.
 
-Ou seja, Bruno paga mais porque ficou mais tempo no carro.
+## Example
 
-## Regras de calculo (sem misterio)
-- A pessoa comeca a pagar no ponto em que entra.
-- Para de pagar no ponto em que sai.
-- Cada trecho e dividido apenas entre quem estava no carro naquele trecho.
-- O custo total da corrida e proporcional a distancia de cada trecho.
-- No final, o app calcula transferencias (quem paga para quem) com base em quem realmente pagou no Uber.
+The landing page uses a simplified educational scenario with four passengers and a total fare of 80 monetary units. One passenger starts the ride, while three others join at different stops. The last passenger joins near the destination.
 
-## Recursos atuais
-- Arrastar e reordenar paradas (drag and drop)
-- Copiar ida para volta com 1 clique (mantendo edicao manual)
-- Resultado com:
-  - total e distancia
-  - custo por pessoa
-  - transferencias finais
-  - resumo rapido de saldo
-  - grafico de quem ficou mais tempo no carro
-- Idiomas: Portugues, English, Espanol
-- Moeda automatica por idioma:
-  - pt-BR -> BRL (R$)
-  - en-US -> USD ($)
-  - es-ES -> EUR (EUR)
+An equal split would be:
 
-## Tecnologias
-- React
-- TypeScript
+```text
+80 / 4 = 20 each
+```
+
+The illustrative proportional split is:
+
+| Passenger | Share |
+| --- | ---: |
+| Passenger A | 40.50 |
+| Passenger B | 20.50 |
+| Passenger C | 12.50 |
+| Passenger D | 6.50 |
+| **Total** | **80.00** |
+
+These values are fixed demonstration data used to explain the product. They are not presented as output from the production calculation engine.
+
+## Current features
+
+- Introductory landing page explaining when and why to use UberSplit
+- Multi-passenger ride setup
+- Multiple stops with passengers entering and leaving at different points
+- Outbound and return trips
+- Drag-and-drop stop ordering with dnd-kit
+- Address autocomplete with contextual global search
+- Distance-proportional, segment-based fare calculation
+- Payer selection and final reimbursement calculation
+- Route geometry, interactive Leaflet map, animated route narrative, and ride timeline
+- Receipt-style result screen with per-passenger and per-segment details
+- Short shared links backed by Supabase RPCs
+- Compatibility with legacy `?ride=` links
+- Copyable localized summary and WhatsApp sharing
+- Responsive mobile-first interface
+- Reduced-motion support
+- Localized interface:
+  - Portuguese (Brazil)
+  - English (United States)
+  - Spanish (Spain)
+  - Simplified Chinese
+
+## How the calculation works
+
+1. The ride is split into route segments.
+2. Each segment receives a portion of the fare proportional to its distance.
+3. The segment is divided among the passengers present during that segment.
+4. Segment shares are added to calculate each passenger's total.
+5. Payments already made are considered to generate the final reimbursements.
+
+The same calculation engine is used for outbound rides, return rides, restored shared rides, and the result receipt.
+
+## Sharing architecture
+
+- Shared rides use eight-character, URL-safe IDs.
+- The frontend creates and retrieves shared rides only through dedicated Supabase RPC calls.
+- Current short links use the format `?s=XXXXXXXX`.
+- Legacy payload links using `?ride=` remain readable.
+- A short link is created only after the user chooses to copy or share the result.
+- The generated ID is cached in memory and reused while the ride data remains unchanged.
+- If short-link creation is unavailable, the app can still copy or share a summary without silently attaching the long fallback URL.
+
+## Architecture
+
+### Frontend
+
+- React 18 and TypeScript
 - Vite
 - Tailwind CSS
-- dnd-kit
 - Framer Motion
+- dnd-kit
+- React Leaflet and Leaflet
+- React Router
+- Vitest and Testing Library
 
-## Rodando localmente
+The browser also requests address results from Nominatim and route geometry from OSRM. The landing-page demonstration is local SVG/CSS and does not use geolocation or real addresses.
+
+### Shared-ride storage
+
+- Supabase JavaScript client
+- PostgreSQL-backed RPC workflow
+- Dedicated create and lookup functions from the browser client
+
+Database migrations and function definitions are not currently versioned in this repository, so database-side policies and function permissions must be reviewed in the Supabase project itself.
+
+### Hosting
+
+- Static frontend hosted on GitHub Pages
+- Production builds generated by Vite
+- `gh-pages` used by the deployment script
+
+## Security and privacy
+
+The repository confirms the following client-side boundaries:
+
+- The frontend reads only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`.
+- No service-role or secret key is used by the client application.
+- Shared rides are created and retrieved through `create_shared_ride` and `get_shared_ride` RPCs.
+- The frontend does not perform direct table `select`, `insert`, `update`, or `delete` operations for shared rides.
+- Short IDs and returned payloads are validated before use by the client.
+
+Anyone with a shared link may view the names, addresses, and ride information included in that shared result. Users can choose whether to include full addresses or hide residential numbers before sharing.
+
+This section describes observable repository behavior, not a claim that the complete deployed system is secure. Database-side RLS, grants, validation, expiration, and retention depend on the Supabase configuration, which is not stored in this repository.
+
+## Running locally
+
 ```bash
+git clone https://github.com/evandrini/uber-split.git
+cd uber-split
 npm install
+```
+
+Create a `.env.local` file based on `.env.example`:
+
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+Only use a Supabase publishable browser key. Never place a secret key or service-role key in a `VITE_` variable.
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-## Build de producao
+Without Supabase environment variables, the calculator still runs locally, but short-link creation and retrieval are unavailable.
+
+## Available scripts
+
 ```bash
-npm run build
+npm run dev        # Start the Vite development server
+npm run test       # Run the Vitest suite once
+npm run test:watch # Run tests in watch mode
+npm run lint       # Run ESLint
+npm run build      # Create a production build
+npm run preview    # Preview the production build locally
+npm run deploy     # Publish dist/ through gh-pages
 ```
 
-## Deploy GitHub Pages
-```bash
-npm run deploy
+## Project structure
+
+```text
+src/
+  components/       UI, route map, landing demo, and form steps
+  i18n/             Language context, locale settings, and translations
+  lib/              Supabase client and shared utilities
+  pages/            Application routes
+  test/             Unit and component tests
+  types/            Ride and calculation types
+  utils/            Calculation, route, sharing, and demo logic
+public/              Static assets and language flags
 ```
 
-## Objetivo do projeto
-Deixar uma conta que normalmente gera discussao em algo claro, justo e facil de explicar para qualquer pessoa.
+## Contributing
+
+Issues and pull requests are welcome. Before submitting a change:
+
+1. Keep calculation changes covered by tests.
+2. Preserve compatibility with both `?s=` and legacy `?ride=` links.
+3. Add translations for all four supported languages when introducing user-facing copy.
+4. Run `npm run test`, `npm run build`, and `npm run lint`.
+
+Do not commit real ride data, personal addresses, Supabase secrets, or service-role credentials.
+
+## License
+
+UberSplit is available under the [MIT License](LICENSE).
